@@ -69,7 +69,40 @@ export default function Home() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('전체');
   const [isLocating, setIsLocating] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [requirementsFilter, setRequirementsFilter] = useState<string[]>([]);
+  const [dogFriendlyOnly, setDogFriendlyOnly] = useState(false);
   const myLocationMarkerRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const searchResults = searchQuery.trim().length > 0
+    ? places.filter(p =>
+      p.name.includes(searchQuery) ||
+      p.address?.includes(searchQuery) ||
+      p.subCategory?.includes(searchQuery)
+    )
+    : [];
+
+  const handleSearchSelect = (place: Place) => {
+    setSelectedPlace(place);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    if (map) {
+      const pos = new window.kakao.maps.LatLng(place.lat, place.lng);
+      map.panTo(pos);
+      map.setLevel(4);
+    }
+  };
+
+  const toggleSearch = () => {
+    setIsSearchOpen(prev => {
+      if (!prev) setTimeout(() => searchInputRef.current?.focus(), 100);
+      return !prev;
+    });
+    setSearchQuery('');
+  };
 
   // 1. Fetch places from Firestore (falls back to mock data if empty)
   useEffect(() => {
@@ -213,7 +246,7 @@ export default function Home() {
 
       {/* UI Overlay Layer (Header + Categories + FAB) */}
       <div className="ui-layer">
-        
+
         {/* Top Header */}
         <div className="top-header">
           <div className="brand">
@@ -221,10 +254,68 @@ export default function Home() {
             멍스팟
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="header-icon-btn"><Search size={22} /></button>
-            <button className="header-icon-btn"><Menu size={22} /></button>
+            <button
+              className={`header-icon-btn ${isSearchOpen ? 'active' : ''}`}
+              onClick={toggleSearch}
+              aria-label="검색"
+            >
+              {isSearchOpen ? <X size={22} /> : <Search size={22} />}
+            </button>
+            <button
+              className={`header-icon-btn ${isDrawerOpen ? 'active' : ''}`}
+              onClick={() => { setIsDrawerOpen(p => !p); setIsSearchOpen(false); }}
+              aria-label="메뉴"
+            >
+              <Menu size={22} />
+            </button>
           </div>
         </div>
+
+        {/* Search Panel - 슬라이드 다운 */}
+        {isSearchOpen && (
+          <div className="search-panel">
+            <div className="search-input-wrap">
+              <Search size={18} color="var(--text-secondary)" />
+              <input
+                ref={searchInputRef}
+                className="search-input"
+                type="text"
+                placeholder="장소명, 주소, 소분류 검색..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex' }}>
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            {searchResults.length > 0 && (
+              <ul className="search-results">
+                {searchResults.map(place => (
+                  <li key={place.id} className="search-result-item" onClick={() => handleSearchSelect(place)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ background: '#FFF4E6', borderRadius: '8px', padding: '6px', color: 'var(--primary-color)', flexShrink: 0 }}>
+                        <MapPin size={16} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>{place.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {place.category} · {place.subCategory} · {place.address}
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {searchQuery.trim().length > 0 && searchResults.length === 0 && (
+              <div style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
+                "지역, 업종, 장소명"으로 검색해보세요.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Category Pills - 실제 필터 동작 */}
         <div className="category-filters">
@@ -239,6 +330,72 @@ export default function Home() {
           ))}
         </div>
 
+      </div>
+
+      {/* Side Drawer Overlay */}
+      {isDrawerOpen && (
+        <div className="drawer-overlay" onClick={() => setIsDrawerOpen(false)} />
+      )}
+
+      {/* Side Drawer */}
+      <div className={`side-drawer ${isDrawerOpen ? 'open' : ''}`}>
+        <div className="drawer-header">
+          <div className="brand" style={{ fontSize: '1.1rem' }}>
+            <MapIcon size={20} color="var(--primary-color)" /> 멍스팟
+          </div>
+          <button className="close-btn" onClick={() => setIsDrawerOpen(false)}><X size={20} /></button>
+        </div>
+
+        <p style={{ padding: '0 20px 16px', fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+          강아지와 함께 갈 수 있는 식당, 카페, 명소를<br />직접 조사하고 사람들과 나누는 지도서비스입니다. 🐾
+        </p>
+
+        <div className="drawer-divider" />
+
+        {/* 상세 필터 */}
+        <div className="drawer-section">
+          <div className="drawer-section-title">상세 필터</div>
+          <label className="drawer-toggle">
+            <span>애견동반 가능만 보기</span>
+            <div className={`toggle-switch ${dogFriendlyOnly ? 'on' : ''}`} onClick={() => setDogFriendlyOnly(p => !p)} />
+          </label>
+          <div style={{ marginTop: '12px' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>필요 항목 필터</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {['견모차', '슬링백', '캐리어', '입마개', '리드줄 필수'].map(req => (
+                <button key={req}
+                  onClick={() => setRequirementsFilter(prev =>
+                    prev.includes(req) ? prev.filter(r => r !== req) : [...prev, req]
+                  )}
+                  style={{
+                    padding: '6px 12px', borderRadius: '999px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+                    background: requirementsFilter.includes(req) ? '#7C3AED' : '#F4F5F7',
+                    color: requirementsFilter.includes(req) ? '#fff' : 'var(--text-secondary)',
+                    border: 'none', fontFamily: 'inherit',
+                  }}
+                >🐾 {req}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="drawer-divider" />
+
+        <a href="/suggest" className="drawer-action-btn">
+          <span style={{ fontSize: '1.4rem' }}>➕</span>
+          <div>
+            <div style={{ fontWeight: 700 }}>장소 등록 제안하기</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>내가 아는 애견 수지 장소를 제안해 주세요</div>
+          </div>
+        </a>
+
+        <a href="mailto:mungspot.com@gmail.com" className="drawer-action-btn">
+          <span style={{ fontSize: '1.4rem' }}>📬</span>
+          <div>
+            <div style={{ fontWeight: 700 }}>오류 신고 / 문의</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>mungspot.com@gmail.com</div>
+          </div>
+        </a>
       </div>
 
       {/* Floating Action Buttons */}
@@ -260,7 +417,7 @@ export default function Home() {
       {selectedPlace && (
         <div className="place-info-card">
           <div className="sheet-handle"></div>
-          
+
           <div className="place-header">
             <div>
               <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
@@ -272,8 +429,8 @@ export default function Home() {
               </div>
               <h2 className="place-title">{selectedPlace.name}</h2>
             </div>
-            <button 
-              className="close-btn" 
+            <button
+              className="close-btn"
               onClick={() => setSelectedPlace(null)}
               aria-label="닫기"
             >
@@ -282,19 +439,19 @@ export default function Home() {
           </div>
 
           <div className="place-meta">
-             <MapPin size={16} />
-             <span>{selectedPlace.address || '주소 정보 없음'}</span>
+            <MapPin size={16} />
+            <span>{selectedPlace.address || '주소 정보 없음'}</span>
           </div>
 
           {/* 애견동반 여부 + 필요항목 */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {selectedPlace.isDogFriendly
               ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#16A34A', background: '#F0FDF4', padding: '4px 10px', borderRadius: '999px' }}>
-                  <CheckCircle size={13} /> 애견동반 가능
-                </span>
+                <CheckCircle size={13} /> 애견동반 가능
+              </span>
               : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: '#FFF5F5', padding: '4px 10px', borderRadius: '999px' }}>
-                  <AlertCircle size={13} /> 동반 여부 확인 필요
-                </span>
+                <AlertCircle size={13} /> 동반 여부 확인 필요
+              </span>
             }
             {selectedPlace.requirements?.map(req => (
               <span key={req} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7C3AED', background: '#F5F3FF', padding: '4px 10px', borderRadius: '999px' }}>
@@ -310,15 +467,38 @@ export default function Home() {
           )}
 
           <div className="place-actions">
-             <button className="btn-primary" onClick={() => openDirections(selectedPlace)}>
-                <Navigation size={18} />
-                길찾기
-             </button>
-             <button className="btn-secondary" onClick={() => sharePlace(selectedPlace)}>
-                <Share2 size={18} />
-                공유
-             </button>
+            <button className="btn-primary" onClick={() => openDirections(selectedPlace)}>
+              <Navigation size={18} />
+              길찾기
+            </button>
+            <button className="btn-secondary" onClick={() => sharePlace(selectedPlace)}>
+              <Share2 size={18} />
+              공유
+            </button>
           </div>
+
+          {/* 피드백 */}
+          <button
+            onClick={() => {
+              const type = prompt('피드백 유형을 입력하세요:\n1. 정보 수정 요청\n2. 폐업·삭제 요청\n3. 기타');
+              if (!type) return;
+              const typeMap: Record<string, string> = { '1': 'correction', '2': 'delete', '3': 'other' };
+              const message = prompt('자세한 내용을 입력해 주세요:');
+              if (!message) return;
+              import('firebase/firestore').then(({ addDoc, collection }) => {
+                addDoc(collection(db, 'feedbacks'), {
+                  placeId: selectedPlace.id,
+                  placeName: selectedPlace.name,
+                  type: typeMap[type] || 'other',
+                  message,
+                  createdAt: new Date().toISOString(),
+                }).then(() => alert('피드백이 접수되었습니다. 감사합니다! 🐾'));
+              });
+            }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline', padding: '4px 0', marginTop: '4px', fontFamily: 'inherit' }}
+          >
+            이 정보가 틀렸나요?
+          </button>
         </div>
       )}
     </main>
