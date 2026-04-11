@@ -15,11 +15,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
-        {/* Load Kakao Map API. Add autoload=false since we'll load it dynamically in components if needed, or omit it and let next/script load it. */}
-        <Script
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services,clusterer&autoload=false`}
-          strategy="beforeInteractive"
-        />
+        {/* Map script is now dynamically loaded in page.tsx to prevent loading race conditions */}
         {children}
       </body>
     </html>

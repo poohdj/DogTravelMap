@@ -64,19 +64,27 @@ export default function Home() {
 
   // 2. Initialize Kakao Map
   useEffect(() => {
-    if (!window.kakao || !window.kakao.maps || !mapRef.current) return;
+    const initMap = () => {
+      if (!mapRef.current) return;
+      window.kakao.maps.load(() => {
+        const center = new window.kakao.maps.LatLng(37.3218778, 126.8308848);
+        const options = {
+          center,
+          level: 4,
+        };
+        const newMap = new window.kakao.maps.Map(mapRef.current, options);
+        setMap(newMap);
+      });
+    };
 
-    window.kakao.maps.load(() => {
-      // 안산시청 중심 좌표
-      const center = new window.kakao.maps.LatLng(37.3218778, 126.8308848);
-      const options = {
-        center,
-        level: 4, // Zoom level
-      };
-
-      const newMap = new window.kakao.maps.Map(mapRef.current, options);
-      setMap(newMap);
-    });
+    if (window.kakao && window.kakao.maps) {
+      initMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services,clusterer&autoload=false`;
+      document.head.appendChild(script);
+      script.onload = () => initMap();
+    }
   }, []);
 
   // 3. Render Markers when map and places are ready
