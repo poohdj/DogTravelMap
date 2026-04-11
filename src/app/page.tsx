@@ -53,11 +53,21 @@ const MOCK_PLACES: Place[] = [
   }
 ];
 
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  '전체': null,
+  '카페': <Coffee size={15} />,
+  '식당': <Utensils size={15} />,
+  '명소': <TreePine size={15} />,
+  '숙소': <MapPin size={15} />,
+  '기타': <Menu size={15} />,
+};
+
 export default function Home() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('전체');
   const [isLocating, setIsLocating] = useState(false);
   const myLocationMarkerRef = useRef<any>(null);
 
@@ -122,83 +132,79 @@ export default function Home() {
     }
   }, []);
 
-  // 3. Render Markers when map and places are ready
+  // 3. Render Markers - 카테고리 필터 반영
   useEffect(() => {
     if (!map || places.length === 0) return;
 
     const markers: any[] = [];
+    const filtered = activeCategory === '전체'
+      ? places
+      : places.filter(p => p.category === activeCategory);
 
-    places.forEach((place) => {
+    filtered.forEach((place) => {
       const position = new window.kakao.maps.LatLng(place.lat, place.lng);
-      
-      const marker = new window.kakao.maps.Marker({
-        position,
-        clickable: true
-      });
-
+      const marker = new window.kakao.maps.Marker({ position, clickable: true });
       marker.setMap(map);
       markers.push(marker);
-
       window.kakao.maps.event.addListener(marker, 'click', () => {
         setSelectedPlace(place);
-        map.panTo(position); // Center map to marker
+        map.panTo(position);
       });
     });
 
-    return () => {
-      // Cleanup markers on unmount or updates
-      markers.forEach(marker => marker.setMap(null));
-    };
-  }, [map, places]);
+    // 필터 변경 시 선택된 장소가 필터에서 사라지면 닫기
+    if (selectedPlace && activeCategory !== '전체' && selectedPlace.category !== activeCategory) {
+      setSelectedPlace(null);
+    }
+
+    return () => { markers.forEach(m => m.setMap(null)); };
+  }, [map, places, activeCategory]);
 
   // 4. Move to my current GPS location
   const goToMyLocation = useCallback(() => {
     if (!map || isLocating) return;
-
     if (!navigator.geolocation) {
       alert('이 브라우저는 내 위치 기능을 지원하지 않습니다.');
       return;
     }
-
     setIsLocating(true);
-
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
         const myPos = new window.kakao.maps.LatLng(latitude, longitude);
-
-        // Remove old my-location marker if exists
-        if (myLocationMarkerRef.current) {
-          myLocationMarkerRef.current.setMap(null);
-        }
-
-        // Add a distinct marker for my location
-        const marker = new window.kakao.maps.Marker({
-          position: myPos,
-          title: '현재 내 위치',
-        });
+        if (myLocationMarkerRef.current) myLocationMarkerRef.current.setMap(null);
+        const marker = new window.kakao.maps.Marker({ position: myPos, title: '현재 내 위치' });
         marker.setMap(map);
         myLocationMarkerRef.current = marker;
-
-        // Smoothly pan map to my location
         map.panTo(myPos);
         map.setLevel(3);
-
         setIsLocating(false);
       },
-      (error) => {
-        setIsLocating(false);
-        if (error.code === error.PERMISSION_DENIED) {
-          alert('위치 접근 권한이 거부되었습니다.\n브라우저 주소창 왼쪽의 자물쇠 아이콘을 클릭하여 위치 권한을 허용해 주세요.');
-        } else if (error.code === error.TIMEOUT) {
-          alert(`위치 요청 시간 초과(TIMEOUT).\n맥북 시스템 설정 > 개인정보 보호 > 위치 서비스 > Chrome이 켜져있는지 확인하세요.`);
-        } else {
-          alert(`위치를 가져올 수 없습니다. (에러코드: ${error.code})\nmessage: ${error.message}`);
-        }
-      },
+      () => { setIsLocating(false); },
       { enableHighAccuracy: false, timeout: 10000 }
     );
   }, [map, isLocating]);
+
+  // 5. 길찾기 (카카오맵 길찾기 연동)
+  const openDirections = useCallback((place: Place) => {
+    const url = `https://map.kakao.com/link/to/${encodeURIComponent(place.name)},${place.lat},${place.lng}`;
+    window.open(url, '_blank');
+  }, []);
+
+  // 6. 공유하기 (Web Share API → 클립보드 fallback)
+  const sharePlace = useCallback(async (place: Place) => {
+    const shareData = {
+      title: `멍스팟 - ${place.name}`,
+      text: `🐾 ${place.name}\n${place.address}\n애견동반: ${place.isDogFriendly ? '가능' : '확인필요'}`,
+      url: `https://map.kakao.com/link/map/${encodeURIComponent(place.name)},${place.lat},${place.lng}`,
+    };
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+      alert('장소 정보가 클립보드에 복사되었습니다!');
+    }
+  }, []);
 
   return (
     <main className="map-container">
@@ -220,12 +226,17 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Category Pills */}
+        {/* Category Pills - 실제 필터 동작 */}
         <div className="category-filters">
-          <button className="filter-pill active">전체</button>
-          <button className="filter-pill"><Coffee size={16} /> 카페</button>
-          <button className="filter-pill"><Utensils size={16} /> 식당</button>
-          <button className="filter-pill"><TreePine size={16} /> 산책로/명소</button>
+          {Object.keys(CATEGORY_ICONS).map(cat => (
+            <button
+              key={cat}
+              className={`filter-pill ${activeCategory === cat ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat)}
+            >
+              {CATEGORY_ICONS[cat]} {cat}
+            </button>
+          ))}
         </div>
 
       </div>
@@ -299,11 +310,11 @@ export default function Home() {
           )}
 
           <div className="place-actions">
-             <button className="btn-primary">
+             <button className="btn-primary" onClick={() => openDirections(selectedPlace)}>
                 <Navigation size={18} />
                 길찾기
              </button>
-             <button className="btn-secondary">
+             <button className="btn-secondary" onClick={() => sharePlace(selectedPlace)}>
                 <Share2 size={18} />
                 공유
              </button>
