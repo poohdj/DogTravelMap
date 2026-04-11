@@ -84,26 +84,41 @@ export default function Home() {
 
   // 2. Initialize Kakao Map
   useEffect(() => {
-    const initMap = () => {
+    const initMap = (lat = 37.5666102, lng = 126.9783882, level = 7) => {
       if (!mapRef.current) return;
       window.kakao.maps.load(() => {
-        const center = new window.kakao.maps.LatLng(37.3218778, 126.8308848);
-        const options = {
-          center,
-          level: 4,
-        };
+        const center = new window.kakao.maps.LatLng(lat, lng);
+        const options = { center, level };
         const newMap = new window.kakao.maps.Map(mapRef.current, options);
         setMap(newMap);
       });
     };
 
+    const startWithLocation = () => {
+      if (!navigator.geolocation) {
+        initMap(); // 위치 불가 → 서울 fallback
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          // 위치 성공 → 사용자 위치로 시작
+          initMap(pos.coords.latitude, pos.coords.longitude, 6);
+        },
+        () => {
+          // 위치 실패 → 서울 fallback
+          initMap();
+        },
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+    };
+
     if (window.kakao && window.kakao.maps) {
-      initMap();
+      startWithLocation();
     } else {
       const script = document.createElement('script');
       script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services,clusterer&autoload=false`;
       document.head.appendChild(script);
-      script.onload = () => initMap();
+      script.onload = () => startWithLocation();
     }
   }, []);
 
@@ -175,11 +190,13 @@ export default function Home() {
         setIsLocating(false);
         if (error.code === error.PERMISSION_DENIED) {
           alert('위치 접근 권한이 거부되었습니다.\n브라우저 주소창 왼쪽의 자물쇠 아이콘을 클릭하여 위치 권한을 허용해 주세요.');
+        } else if (error.code === error.TIMEOUT) {
+          alert(`위치 요청 시간 초과(TIMEOUT).\n맥북 시스템 설정 > 개인정보 보호 > 위치 서비스 > Chrome이 켜져있는지 확인하세요.`);
         } else {
-          alert('현재 위치를 가져오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.');
+          alert(`위치를 가져올 수 없습니다. (에러코드: ${error.code})\nmessage: ${error.message}`);
         }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 10000 }
     );
   }, [map, isLocating]);
 
