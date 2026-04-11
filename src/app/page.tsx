@@ -385,7 +385,7 @@ export default function Home() {
           <span style={{ fontSize: '1.4rem' }}>➕</span>
           <div>
             <div style={{ fontWeight: 700 }}>장소 등록 제안하기</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>내가 아는 애견 수지 장소를 제안해 주세요</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>내가 아는 애견 동반 장소를 제안해 주세요</div>
           </div>
         </a>
 
