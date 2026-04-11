@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader } from 'lucide-react';
-// import { collection, getDocs } from 'firebase/firestore';
-// import { db } from '@/lib/firebase';
+import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader, CheckCircle, AlertCircle, Tag } from 'lucide-react';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 // Add type for Kakao Map so typescript doesn't complain
 declare global {
@@ -15,26 +15,41 @@ declare global {
 interface Place {
   id: string;
   name: string;
-  category: string;
+  category: string;       // 대분류: 식당 / 카페 / 명소 / 숙소 / 기타
+  subCategory: string;    // 소분류: 한식 / 중식 / 애견카페 / 공원 등
   lat: number;
   lng: number;
+  address: string;
+  isDogFriendly: boolean; // 애견동반 가능 여부
+  requirements: string[]; // 필요 항목: ["견모차", "슬링백"] 등
+  notes?: string;         // 기타 메모
 }
 
-// Temporary hardcoded data as requested
+// 테스트용 샘플 데이터 (Firestore 연동 후 자동으로 교체됨)
 const MOCK_PLACES: Place[] = [
   {
     id: '1',
-    name: '벤지가 편하게 쉬는 카페',
-    category: '애견 동반 카페',
-    lat: 37.3225, // Ansan area coordinate
+    name: '테스트 애견카페',
+    category: '카페',
+    subCategory: '애견카페',
+    lat: 37.3225,
     lng: 126.8315,
+    address: '경기도 안산시 단원구 테스트로 1',
+    isDogFriendly: true,
+    requirements: [],
+    notes: 'Firestore 연동 전 테스트 마커입니다.',
   },
   {
     id: '2',
-    name: '밤콩이 뛰노는 산책로',
-    category: '산책로/공원',
-    lat: 37.3210, // Ansan area coordinate
+    name: '테스트 한식당',
+    category: '식당',
+    subCategory: '한식',
+    lat: 37.3210,
     lng: 126.8290,
+    address: '경기도 안산시 단원구 테스트로 2',
+    isDogFriendly: true,
+    requirements: ['견모차'],
+    notes: '야외 테라스만 입장 가능.',
   }
 ];
 
@@ -46,19 +61,22 @@ export default function Home() {
   const [isLocating, setIsLocating] = useState(false);
   const myLocationMarkerRef = useRef<any>(null);
 
-  // 1. Fetch places - simulated or real Firestore
+  // 1. Fetch places from Firestore (falls back to mock data if empty)
   useEffect(() => {
     async function fetchPlaces() {
       try {
-        // [TODO] Real DB integration:
-        // const querySnapshot = await getDocs(collection(db, 'places'));
-        // const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Place[];
-        // setPlaces(data);
-        
-        // For MVP initial rendering: show hardcoded data
-        setPlaces(MOCK_PLACES);
+        const querySnapshot = await getDocs(collection(db, 'places'));
+        if (!querySnapshot.empty) {
+          const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Place[];
+          setPlaces(data);
+        } else {
+          // Firestore가 비어있으면 테스트 데이터로 fallback
+          console.warn('Firestore에 데이터가 없습니다. 테스트 데이터를 표시합니다.');
+          setPlaces(MOCK_PLACES);
+        }
       } catch (error) {
-        console.error("Error fetching places:", error);
+        console.error('Error fetching places:', error);
+        setPlaces(MOCK_PLACES);
       }
     }
     fetchPlaces();
@@ -217,7 +235,13 @@ export default function Home() {
           
           <div className="place-header">
             <div>
-              <span className="place-category">{selectedPlace.category}</span>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                <span className="place-category">{selectedPlace.category}</span>
+                <span className="place-category" style={{ background: '#EEF2FF', color: '#4F46E5' }}>
+                  <Tag size={11} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '2px' }} />
+                  {selectedPlace.subCategory}
+                </span>
+              </div>
               <h2 className="place-title">{selectedPlace.name}</h2>
             </div>
             <button 
@@ -231,8 +255,31 @@ export default function Home() {
 
           <div className="place-meta">
              <MapPin size={16} />
-             <span>안산시 어딘가... (상세주소 연동 필요)</span>
+             <span>{selectedPlace.address || '주소 정보 없음'}</span>
           </div>
+
+          {/* 애견동반 여부 + 필요항목 */}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {selectedPlace.isDogFriendly
+              ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#16A34A', background: '#F0FDF4', padding: '4px 10px', borderRadius: '999px' }}>
+                  <CheckCircle size={13} /> 애견동반 가능
+                </span>
+              : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: '#FFF5F5', padding: '4px 10px', borderRadius: '999px' }}>
+                  <AlertCircle size={13} /> 동반 여부 확인 필요
+                </span>
+            }
+            {selectedPlace.requirements?.map(req => (
+              <span key={req} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7C3AED', background: '#F5F3FF', padding: '4px 10px', borderRadius: '999px' }}>
+                🐾 {req} 필요
+              </span>
+            ))}
+          </div>
+
+          {selectedPlace.notes && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
+              {selectedPlace.notes}
+            </p>
+          )}
 
           <div className="place-actions">
              <button className="btn-primary">
