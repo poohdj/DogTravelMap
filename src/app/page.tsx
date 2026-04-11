@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { X, MapPin } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader } from 'lucide-react';
 // import { collection, getDocs } from 'firebase/firestore';
 // import { db } from '@/lib/firebase';
 
@@ -43,6 +43,8 @@ export default function Home() {
   const [map, setMap] = useState<any>(null);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [isLocating, setIsLocating] = useState(false);
+  const myLocationMarkerRef = useRef<any>(null);
 
   // 1. Fetch places - simulated or real Firestore
   useEffect(() => {
@@ -116,26 +118,131 @@ export default function Home() {
     };
   }, [map, places]);
 
+  // 4. Move to my current GPS location
+  const goToMyLocation = useCallback(() => {
+    if (!map || isLocating) return;
+
+    if (!navigator.geolocation) {
+      alert('이 브라우저는 내 위치 기능을 지원하지 않습니다.');
+      return;
+    }
+
+    setIsLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const myPos = new window.kakao.maps.LatLng(latitude, longitude);
+
+        // Remove old my-location marker if exists
+        if (myLocationMarkerRef.current) {
+          myLocationMarkerRef.current.setMap(null);
+        }
+
+        // Add a distinct marker for my location
+        const marker = new window.kakao.maps.Marker({
+          position: myPos,
+          title: '현재 내 위치',
+        });
+        marker.setMap(map);
+        myLocationMarkerRef.current = marker;
+
+        // Smoothly pan map to my location
+        map.panTo(myPos);
+        map.setLevel(3);
+
+        setIsLocating(false);
+      },
+      (error) => {
+        setIsLocating(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          alert('위치 접근 권한이 거부되었습니다.\n브라우저 주소창 왼쪽의 자물쇠 아이콘을 클릭하여 위치 권한을 허용해 주세요.');
+        } else {
+          alert('현재 위치를 가져오는 데 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [map, isLocating]);
+
   return (
     <main className="map-container">
       {/* Map Rendering Container */}
       <div id="kakao-map" ref={mapRef}></div>
 
+      {/* UI Overlay Layer (Header + Categories + FAB) */}
+      <div className="ui-layer">
+        
+        {/* Top Header */}
+        <div className="top-header">
+          <div className="brand">
+            <MapIcon size={24} color="var(--primary-color)" />
+            멍스팟
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="header-icon-btn"><Search size={22} /></button>
+            <button className="header-icon-btn"><Menu size={22} /></button>
+          </div>
+        </div>
+
+        {/* Category Pills */}
+        <div className="category-filters">
+          <button className="filter-pill active">전체</button>
+          <button className="filter-pill"><Coffee size={16} /> 카페</button>
+          <button className="filter-pill"><Utensils size={16} /> 식당</button>
+          <button className="filter-pill"><TreePine size={16} /> 산책로/명소</button>
+        </div>
+
+      </div>
+
+      {/* Floating Action Buttons */}
+      <div className={`fab-container ${selectedPlace ? 'sheet-open' : ''}`}>
+        <button
+          className="fab-btn"
+          aria-label="내 위치로 이동"
+          onClick={goToMyLocation}
+          disabled={isLocating}
+          style={{ color: isLocating ? 'var(--primary-color)' : 'var(--text-main)' }}
+        >
+          {isLocating
+            ? <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
+            : <Navigation size={22} />}
+        </button>
+      </div>
+
       {/* Place Info Bottom Sheet */}
       {selectedPlace && (
         <div className="place-info-card">
-          <button 
-            className="close-btn" 
-            onClick={() => setSelectedPlace(null)}
-            aria-label="닫기"
-          >
-            <X size={20} />
-          </button>
-          <span className="place-category">{selectedPlace.category}</span>
-          <h2 className="place-title">{selectedPlace.name}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '8px' }}>
+          <div className="sheet-handle"></div>
+          
+          <div className="place-header">
+            <div>
+              <span className="place-category">{selectedPlace.category}</span>
+              <h2 className="place-title">{selectedPlace.name}</h2>
+            </div>
+            <button 
+              className="close-btn" 
+              onClick={() => setSelectedPlace(null)}
+              aria-label="닫기"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="place-meta">
              <MapPin size={16} />
              <span>안산시 어딘가... (상세주소 연동 필요)</span>
+          </div>
+
+          <div className="place-actions">
+             <button className="btn-primary">
+                <Navigation size={18} />
+                길찾기
+             </button>
+             <button className="btn-secondary">
+                <Share2 size={18} />
+                공유
+             </button>
           </div>
         </div>
       )}
