@@ -262,7 +262,9 @@ body:has(.admin-page-body) {
   height: 4px;
   background: #EAECEF;
   border-radius: var(--radius-pill);
-  margin: -16px auto 16px auto;
+  margin: 12px auto 0 auto;
+  flex-shrink: 0;
+  display: none; /* Default hidden, shown in bottom sheets */
 }
 
 .place-header {
@@ -388,6 +390,44 @@ body:has(.admin-page-body) {
 
 .side-drawer.open {
   transform: translateX(0);
+}
+
+/* Specific styling for the Filter Drawer (Responsive) */
+@media (max-width: 640px) {
+  .filter-drawer.side-drawer {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 85vh;
+    border-top-left-radius: var(--radius-lg);
+    border-top-right-radius: var(--radius-lg);
+    transform: translateY(100%);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  .filter-drawer.side-drawer.open {
+    transform: translateY(0);
+  }
+
+  .filter-drawer .sheet-handle {
+    display: block;
+  }
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.drawer-footer {
+  padding: 16px 20px 24px 20px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--white);
+  border-top: 1px solid #F0F0F0;
+  flex-shrink: 0;
 }
 
 .drawer-header {

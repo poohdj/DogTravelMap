@@ -95,6 +95,24 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // iPhone Safari Address Bar Color Management
+  useEffect(() => {
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      document.head.appendChild(meta);
+    }
+    
+    if (isFilterOpen) {
+      // 필터 열릴 때: 흰색으로 고정 (주소창 색상 고임 방지)
+      meta.setAttribute('content', '#ffffff');
+    } else {
+      // 필터 닫힐 때: 기본 글래스 모디 배경색과 유사하게 리셋
+      meta.setAttribute('content', '#f9f9fb');
+    }
+  }, [isFilterOpen]);
   
   // 개별 필터 상태
   const [conditionsFilter, setConditionsFilter] = useState<string[]>([]);
@@ -444,6 +462,7 @@ export default function Home() {
 
       {/* Filter Drawer */}
       <div className={`side-drawer filter-drawer ${isFilterOpen ? 'open' : ''}`}>
+        <div className="sheet-handle" />
         <div className="drawer-header">
           <div className="brand" style={{ fontSize: '1.1rem' }}>
             <SlidersHorizontal size={20} color="var(--primary-color)" /> 상세 필터
@@ -451,88 +470,90 @@ export default function Home() {
           <button className="close-btn" onClick={() => setIsFilterOpen(false)}><X size={20} /></button>
         </div>
 
-        <div className="drawer-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              맞춤형 장소를 찾아보세요
+        <div className="drawer-content">
+          <div className="drawer-section" style={{ paddingTop: '0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                맞춤형 장소를 찾아보세요
+              </div>
+              <button 
+                onClick={() => {
+                  setDogFriendlyOnly(false);
+                  setConditionsFilter([]);
+                  setGearsFilter([]);
+                  setFacilitiesFilter([]);
+                }}
+                className="reset-btn"
+              >
+                초기화
+              </button>
             </div>
-            <button 
-              onClick={() => {
-                setDogFriendlyOnly(false);
-                setConditionsFilter([]);
-                setGearsFilter([]);
-                setFacilitiesFilter([]);
-              }}
-              className="reset-btn"
-            >
-              초기화
-            </button>
-          </div>
-          
-          <label className="drawer-toggle-item">
-            <div className="toggle-info">
-              <CheckCircle size={18} color={dogFriendlyOnly ? 'var(--primary-color)' : '#9094A6'} />
-              <span>인증된 장소만 보기</span>
+            
+            <label className="drawer-toggle-item">
+              <div className="toggle-info">
+                <CheckCircle size={18} color={dogFriendlyOnly ? 'var(--primary-color)' : '#9094A6'} />
+                <span>인증된 장소만 보기</span>
+              </div>
+              <div className={`toggle-switch ${dogFriendlyOnly ? 'on' : ''}`} onClick={() => setDogFriendlyOnly(p => !p)} />
+            </label>
+            
+            <div className="filter-group">
+              <div className="filter-group-title">
+                🐾 우리 아이 조건 <span className="logic-badge and">AND</span>
+              </div>
+              <div className="filter-chips">
+                {DOG_CONDITIONS.map(item => (
+                  <button key={item}
+                    className={`filter-chip ${conditionsFilter.includes(item) ? 'active condition' : ''}`}
+                    onClick={() => setConditionsFilter(prev =>
+                      prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
+                    )}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className={`toggle-switch ${dogFriendlyOnly ? 'on' : ''}`} onClick={() => setDogFriendlyOnly(p => !p)} />
-          </label>
-          
-          <div className="filter-group">
-            <div className="filter-group-title">
-              🐾 우리 아이 조건 <span className="logic-badge and">AND</span>
-            </div>
-            <div className="filter-chips">
-              {DOG_CONDITIONS.map(item => (
-                <button key={item}
-                  className={`filter-chip ${conditionsFilter.includes(item) ? 'active condition' : ''}`}
-                  onClick={() => setConditionsFilter(prev =>
-                    prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
-                  )}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="filter-group">
-            <div className="filter-group-title">
-              🔖 보호자 준비물 <span className="logic-badge or">OR</span>
+            <div className="filter-group">
+              <div className="filter-group-title">
+                🔖 보호자 준비물 <span className="logic-badge or">OR</span>
+              </div>
+              <div className="filter-chips">
+                {GEAR_REQUIREMENTS.map(item => (
+                  <button key={item}
+                    className={`filter-chip ${gearsFilter.includes(item) ? 'active gear' : ''}`}
+                    onClick={() => setGearsFilter(prev =>
+                      prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
+                    )}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="filter-chips">
-              {GEAR_REQUIREMENTS.map(item => (
-                <button key={item}
-                  className={`filter-chip ${gearsFilter.includes(item) ? 'active gear' : ''}`}
-                  onClick={() => setGearsFilter(prev =>
-                    prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
-                  )}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          <div className="filter-group">
-            <div className="filter-group-title">
-              ✨ 장소 및 편의 시설 <span className="logic-badge and">AND</span>
-            </div>
-            <div className="filter-chips">
-              {PLACE_FACILITIES.map(item => (
-                <button key={item}
-                  className={`filter-chip ${facilitiesFilter.includes(item) ? 'active facility' : ''}`}
-                  onClick={() => setFacilitiesFilter(prev =>
-                    prev.includes(item) ? prev.filter(f => f !== item) : [...prev, item]
-                  )}
-                >
-                  {item}
-                </button>
-              ))}
+            <div className="filter-group" style={{ marginBottom: '10px' }}>
+              <div className="filter-group-title">
+                ✨ 장소 및 편의 시설 <span className="logic-badge and">AND</span>
+              </div>
+              <div className="filter-chips">
+                {PLACE_FACILITIES.map(item => (
+                  <button key={item}
+                    className={`filter-chip ${facilitiesFilter.includes(item) ? 'active facility' : ''}`}
+                    onClick={() => setFacilitiesFilter(prev =>
+                      prev.includes(item) ? prev.filter(f => f !== item) : [...prev, item]
+                    )}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        <div style={{ marginTop: 'auto', padding: '20px' }}>
+        <div className="drawer-footer">
           <button className="btn-primary" onClick={() => setIsFilterOpen(false)} style={{ width: '100%' }}>
             필터 적용하기
           </button>
