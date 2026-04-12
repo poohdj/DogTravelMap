@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { signInWithPopup, onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { db, auth, googleProvider } from '@/lib/firebase';
-import { MapPin, Plus, CheckCircle, Loader, LogOut, LogIn, Clock, Check, X, Pencil, Trash2, List, AlertCircle } from 'lucide-react';
+import { MapPin, Plus, CheckCircle, Loader, LogOut, LogIn, Clock, Check, X, Pencil, Trash2, List, AlertCircle, Search } from 'lucide-react';
 
 declare global {
   interface Window { kakao: any; daum: any; }
