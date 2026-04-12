@@ -6,6 +6,7 @@ import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase
 import { signInWithPopup, onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { db, auth, googleProvider } from '@/lib/firebase';
 import { MapPin, Plus, CheckCircle, Loader, LogOut, LogIn, Clock, Check, X, Pencil, Trash2, List, AlertCircle, Search, Navigation, MousePointer2 } from 'lucide-react';
+import LocationSelector from '@/components/LocationSelector';
 
 declare global {
   interface Window { kakao: any; daum: any; }
@@ -105,178 +106,8 @@ export default function AdminPage() {
   // 피드백 목록
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
 
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
 
-  // 페이지 마운트 시 Kakao SDK 사전 로드
-  useEffect(() => {
-    const loadKakao = () => {
-      if (!window.kakao?.maps?.services) {
-        const ms = document.createElement('script');
-        ms.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services&autoload=false`;
-        ms.onload = () => window.kakao.maps.load(() => console.log('Admin Kakao Map Loaded'));
-        document.head.appendChild(ms);
-      }
-    };
-    loadKakao();
-  }, []);
-
-  // 지도 초기화 및 위치 업데이트 감지
-  useEffect(() => {
-    if (!form.lat || !form.lng || tab !== 'add') return;
-
-    const initMap = () => {
-      if (!window.kakao?.maps) return;
-      const { maps } = window.kakao;
-      const position = new maps.LatLng(parseFloat(form.lat), parseFloat(form.lng));
-
-      if (!mapInstanceRef.current && mapContainerRef.current) {
-        const options = { center: position, level: 3 };
-        const map = new maps.Map(mapContainerRef.current, options);
-        mapInstanceRef.current = map;
-
-        const marker = new maps.Marker({ position: position, draggable: true });
-        marker.setMap(map);
-        markerRef.current = marker;
-
-        // 마커 드래그 이벤트
-        maps.event.addListener(marker, 'dragend', () => {
-          const latlng = marker.getPosition();
-          updateLocationFromCoords(latlng.getLat(), latlng.getLng());
-        });
-
-        // 지도 클릭 이벤트
-        maps.event.addListener(map, 'click', (mouseEvent: any) => {
-          const latlng = mouseEvent.latLng;
-          marker.setPosition(latlng);
-          updateLocationFromCoords(latlng.getLat(), latlng.getLng());
-        });
-      } else if (mapInstanceRef.current) {
-        mapInstanceRef.current.setCenter(position);
-        if (markerRef.current) markerRef.current.setPosition(position);
-      }
-    };
-
-    if (window.kakao?.maps) {
-      window.kakao.maps.load(initMap);
-    }
-
-    const timer = setTimeout(() => {
-      if (mapInstanceRef.current) mapInstanceRef.current.relayout();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [form.lat, form.lng, tab]);
-
-  const updateLocationFromCoords = (lat: number, lng: number) => {
-    if (!window.kakao?.maps?.services) return;
-    const geocoder = new window.kakao.maps.services.Geocoder();
-    geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-      if (status === window.kakao.maps.services.Status.OK) {
-        const addr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-        setForm(prev => ({
-          ...prev,
-          address: addr,
-          lat: String(lat),
-          lng: String(lng)
-        }));
-      }
-    });
-  };
-
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
-      return;
-    }
-
-    setIsLocating(true);
-
-    const options = { 
-      enableHighAccuracy: true, 
-      timeout: 10000, 
-      maximumAge: 60000 
-    };
-
-    const handleSuccess = (position: GeolocationPosition) => {
-      const { latitude, longitude } = position.coords;
-      if (window.kakao?.maps?.services) {
-        const geocoder = new window.kakao.maps.services.Geocoder();
-        geocoder.coord2Address(longitude, latitude, (result: any, status: any) => {
-          if (status === window.kakao.maps.services.Status.OK) {
-            const addr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-            setForm(prev => ({ ...prev, address: addr, lat: String(latitude), lng: String(longitude) }));
-          } else {
-            alert('주소를 변환하는 데 실패했습니다.');
-          }
-          setIsLocating(false);
-        });
-      } else {
-        setForm(prev => ({ ...prev, lat: String(latitude), lng: String(longitude) }));
-        setIsLocating(false);
-      }
-    };
-
-    const handleError = (err: GeolocationPositionError) => {
-      if (options.enableHighAccuracy && (err.code === 3 || err.code === 2)) {
-        console.warn('Admin retrying with low accuracy...');
-        navigator.geolocation.getCurrentPosition(handleSuccess, handleFinalError, { 
-          ...options, 
-          enableHighAccuracy: false, 
-          timeout: 5000 
-        });
-      } else {
-        handleFinalError(err);
-      }
-    };
-
-    const handleFinalError = (err: GeolocationPositionError) => {
-      console.error('Admin Geolocation Error:', err.code, err.message);
-      let msg = '위치 정보를 가져올 수 없습니다.';
-      if (err.code === 1) msg = '위치 정보 접근 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.';
-      else if (err.code === 2) msg = '현재 위치 신호를 잡을 수 없습니다. (GPS/인터넷 연결을 확인하거나 주소를 직접 검색해 주세요)';
-      else if (err.code === 3) msg = '위치 확인 시간이 초과되었습니다. 다시 시도해 주세요.';
-      alert(msg);
-      setIsLocating(false);
-    };
-
-    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, options);
-  };
-
-  const openAddressSearch = () => {
-    const runSearch = () => {
-      new window.daum.Postcode({
-        oncomplete: (data: any) => {
-          const fullAddress = data.roadAddress || data.jibunAddress;
-          setForm(prev => ({ ...prev, address: fullAddress }));
-
-          const runKakaoSearch = () => {
-            if (!window.kakao?.maps?.services) return;
-            const geocoder = new window.kakao.maps.services.Geocoder();
-            geocoder.addressSearch(fullAddress, (result: any, status: any) => {
-              if (status === window.kakao.maps.services.Status.OK)
-                setForm(prev => ({ ...prev, lat: result[0].y, lng: result[0].x }));
-            });
-          };
-
-          if (window.kakao?.maps) {
-            window.kakao.maps.load(runKakaoSearch);
-          } else {
-            runKakaoSearch();
-          }
-        },
-      }).open();
-    };
-
-    if (!window.daum?.Postcode) {
-      const s = document.createElement('script');
-      s.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
-      s.onload = runSearch;
-      document.head.appendChild(s);
-    } else runSearch();
-  };
 
   // Auth state
   useEffect(() => {
@@ -584,60 +415,29 @@ export default function AdminPage() {
               </div>
             </Field>
             <Field label="주소 *">
-              <div style={{ marginBottom: '6px', fontSize: '0.8rem', color: '#9094A6', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <AlertCircle size={14} /> 주소가 정확한지 확인 후 상세 주소를 입력해 주세요.
+              <div style={{ marginBottom: '16px', fontSize: '0.8rem', color: '#9094A6', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AlertCircle size={14} /> 상호명으로 검색하거나 지도 링크를 붙여넣어 위치를 지정해 주세요.
               </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <input 
-                    style={{ ...styles.input, flex: '1 1 300px', minWidth: '0' }} 
-                    type="text" 
-                    readOnly 
-                    placeholder="아래 버튼을 눌러 주소 검색" 
-                    value={form.address} 
-                  />
-                  <div style={{ display: 'flex', gap: '8px', flex: '1 1 280px' }}>
-                    <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1, minHeight: '44px' }}>
-                      <MapPin size={16} /> 주소 검색
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={useCurrentLocation} 
-                      style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2, minHeight: '44px' }}
-                      disabled={isLocating}
-                    >
-                      {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
-                      <span style={{ marginLeft: '4px' }}>{isLocating ? '확인 중...' : '현 위치'}</span>
-                    </button>
-                  </div>
-                </div>
-              {form.lat && <p style={{ fontSize: '0.78rem', color: '#16A34A', marginTop: '4px' }}>✓ 좌표 자동 입력됨 ({form.lat}, {form.lng})</p>}
+              
+              <LocationSelector 
+                initialValue={{ 
+                  address: form.address, 
+                  lat: form.lat, 
+                  lng: form.lng,
+                  name: form.name 
+                }}
+                onSelect={({ address, lat, lng, name }) => {
+                  setForm(prev => ({ 
+                    ...prev, 
+                    address, 
+                    lat: String(lat), 
+                    lng: String(lng),
+                    name: name || prev.name
+                  }));
+                }}
+              />
 
-              {form.lat && form.lng && (
-                <div style={{ marginTop: '12px' }}>
-                  <div style={{
-                    marginBottom: '10px', fontSize: '0.8rem', color: '#C2410C',
-                    display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600,
-                    background: '#FFF7ED', padding: '10px 14px', borderRadius: '12px',
-                    border: '1px solid #FFEDD5'
-                  }}>
-                    <MousePointer2 size={15} />
-                    <span>핀을 드래그하거나 지도를 클릭해 <strong>상세 위치</strong>를 교정하세요.</span>
-                  </div>
-                  <div
-                    ref={mapContainerRef}
-                    style={{
-                      width: '100%',
-                      height: '240px',
-                      borderRadius: '16px',
-                      border: '1px solid #E5E7EB',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.02)',
-                      overflow: 'hidden'
-                    }}
-                  />
-                </div>
-              )}
-
-              <input style={{ ...styles.input, marginTop: '8px' }} type="text" placeholder="상세 주소 입력 (예: 102호, 2층)"
+              <input style={{ ...styles.input, marginTop: '16px' }} type="text" placeholder="상세 주소 입력 (예: 102호, 2층)"
                 value={form.addressDetail} onChange={e => setForm(p => ({ ...p, addressDetail: e.target.value }))} />
             </Field>
             <Field label="정보 검증 상태 *">
