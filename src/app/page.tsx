@@ -255,9 +255,23 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    // 커스텀 마커 이미지 설정 (강아지 발바닥 SVG 아이콘 - Base64 인코딩)
-    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><path fill="#FF9F1C" d="M20 2C12.27 2 6 8.27 6 16c0 8.4 12 19.2 12 19.2s12-10.8 12-19.2c0-7.73-6.27-14-14-14z"/><circle fill="white" cx="20" cy="16" r="6"/><path fill="#FF9F1C" d="M20 13c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm-3.38 1.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm6.75 0c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm-3.38 3.75c-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5-1.12-2.5-2.5-2.5z"/></svg>`;
-    const imageSrc = `data:image/svg+xml;base64,${btoa(svgIcon)}`;
+    // 커스텀 마커 이미지 설정 (강아지 발바닥 Premium SVG - 오리지널 디자인 복원)
+    const svgIcon = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+        <!-- Pin Shape -->
+        <path fill="#FF9F1C" d="M20 2C12.27 2 6 8.27 6 16c0 8.4 12 19.2 12 19.2s12-10.8 12-19.2c0-7.73-6.27-14-14-14z"/>
+        <!-- White Circle Background for Paw -->
+        <circle fill="white" cx="20" cy="16" r="7.5"/>
+        <!-- Detailed Paw Print -->
+        <g fill="#FF9F1C">
+          <ellipse cx="20" cy="12.5" rx="1.8" ry="2.2"/> <!-- Upper middle toe -->
+          <ellipse cx="16.2" cy="14.2" rx="1.8" ry="2.2" transform="rotate(-25 16.2 14.2)"/> <!-- Left toe -->
+          <ellipse cx="23.8" cy="14.2" rx="1.8" ry="2.2" transform="rotate(25 23.8 14.2)"/> <!-- Right toe -->
+          <path d="M20 17.5c-2.2 0-4 1.2-4 2.8 0 1.2 1.2 2.2 2.5 2.2h3c1.3 0 2.5-1 2.5-2.2 0-1.6-1.8-2.8-4-2.8z"/> <!-- Main Pad -->
+        </g>
+      </svg>
+    `;
+    const imageSrc = `data:image/svg+xml;base64,${btoa(svgIcon.trim())}`;
     const imageSize = new window.kakao.maps.Size(40, 40);
     const imageOption = { offset: new window.kakao.maps.Point(20, 40) }; 
     const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
