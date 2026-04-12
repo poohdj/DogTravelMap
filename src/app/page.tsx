@@ -146,6 +146,20 @@ export default function Home() {
   };
 
   const [isListViewOpen, setIsListViewOpen] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // 거리 계산 함수 (Haversine Formula)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // 거리 (km)
+  };
 
   // 0. 필터링 로직 통합 (useMemo로 상시 개수 파악 가능하게 분리)
   const filteredPlaces = useMemo(() => {
@@ -174,6 +188,16 @@ export default function Home() {
       return true;
     });
   }, [places, activeCategory, dogFriendlyOnly, conditionsFilter, gearsFilter, facilitiesFilter]);
+
+  // 거리순 정렬된 장소 목록
+  const sortedPlaces = useMemo(() => {
+    if (!userLocation) return filteredPlaces;
+    
+    return [...filteredPlaces].map(place => ({
+      ...place,
+      distance: calculateDistance(userLocation.lat, userLocation.lng, place.lat, place.lng)
+    })).sort((a, b) => (a.distance || 0) - (b.distance || 0));
+  }, [filteredPlaces, userLocation]);
 
   const toggleSearch = () => {
     setIsSearchOpen(prev => {
@@ -229,7 +253,9 @@ export default function Home() {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           // 위치 성공 → 사용자 위치로 시작
-          initMap(pos.coords.latitude, pos.coords.longitude, 6);
+          const { latitude, longitude } = pos.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          initMap(latitude, longitude, 6);
         },
         () => {
           // 위치 실패 → 서울 fallback
@@ -312,6 +338,7 @@ export default function Home() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude }); // 사용자 위치 상태 업데이트
         const myPos = new window.kakao.maps.LatLng(latitude, longitude);
         if (myLocationMarkerRef.current) myLocationMarkerRef.current.setMap(null);
         const marker = new window.kakao.maps.Marker({ position: myPos, title: '현재 내 위치' });
@@ -609,17 +636,22 @@ export default function Home() {
 
         <div className="drawer-content">
           <div className="list-container">
-            {filteredPlaces.length === 0 ? (
+            {sortedPlaces.length === 0 ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                 필터에 맞는 장소가 없습니다. 🐾
               </div>
             ) : (
-              filteredPlaces.map((place: Place) => (
+              sortedPlaces.map((place: any) => (
                 <div key={place.id} className="list-item-card" onClick={() => { handleSearchSelect(place); setIsListViewOpen(false); }}>
                   <div className="list-item-info">
                     <div className="list-item-category">{place.subCategory || place.category}</div>
                     <div className="list-item-name">{place.name}</div>
                     <div className="list-item-address">{place.address}</div>
+                    {place.distance !== undefined && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 700, marginTop: '2px', marginBottom: '6px' }}>
+                        현재 위치에서 {place.distance < 1 ? `${Math.round(place.distance * 1000)}m` : `${place.distance.toFixed(1)}km`}
+                      </div>
+                    )}
                     <div className="list-item-features">
                       {[...(place.requirements || []), ...(place.facilities || [])].slice(0, 3).map(f => (
                         <span key={f} className="feature-dot">{f}</span>
