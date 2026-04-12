@@ -482,3 +482,136 @@ body:has(.admin-page-body) {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Advanced Filter Styles */
+.filter-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #EF4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--white);
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.reset-btn {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+.drawer-toggle-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #F9FAFB;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: background 0.2s;
+}
+
+.drawer-toggle-item:active {
+  background: #F3F4F6;
+}
+
+.toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.filter-group {
+  margin-bottom: 28px;
+}
+
+.filter-group-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logic-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.logic-badge.and {
+  background: #EEF2FF;
+  color: #4F46E5;
+  border: 1px solid #C7D2FE;
+}
+
+.logic-badge.or {
+  background: #FFF7ED;
+  color: #C2410C;
+  border: 1px solid #FFEDD5;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #F3F4F6;
+  color: var(--text-secondary);
+  border: 1px solid #E5E7EB;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.filter-chip:hover {
+  background: #E5E7EB;
+}
+
+.filter-chip.active {
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filter-chip.active.condition {
+  background: #7C3AED;
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.3);
+}
+
+.filter-chip.active.gear {
+  background: #4F46E5;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+}
+
+.filter-chip.active.facility {
+  background: #059669;
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3);
+}
