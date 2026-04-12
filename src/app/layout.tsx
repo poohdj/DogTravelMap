@@ -42,6 +42,10 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  verification: {
+    google: 'vfYqxaw1buFycCmBYv-ic65viSS3VA2ymkZjfcFTq-Y',
+    // naver: '발급받으시면 여기에 추가',
+  },
 };
 
 export default function RootLayout({
