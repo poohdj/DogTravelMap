@@ -142,10 +142,10 @@ export default function SuggestPage() {
 
     setIsLocating(true);
 
-    const options = { 
-      enableHighAccuracy: true, 
-      timeout: 10000, 
-      maximumAge: 60000 
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 60000
     };
 
     const handleSuccess = (position: GeolocationPosition) => {
@@ -170,10 +170,10 @@ export default function SuggestPage() {
     const handleError = (err: GeolocationPositionError) => {
       if (options.enableHighAccuracy && (err.code === 3 || err.code === 2)) {
         console.warn('Retrying with low accuracy...');
-        navigator.geolocation.getCurrentPosition(handleSuccess, handleFinalError, { 
-          ...options, 
-          enableHighAccuracy: false, 
-          timeout: 5000 
+        navigator.geolocation.getCurrentPosition(handleSuccess, handleFinalError, {
+          ...options,
+          enableHighAccuracy: false,
+          timeout: 5000
         });
       } else {
         handleFinalError(err);
@@ -317,7 +317,7 @@ export default function SuggestPage() {
             <div style={styles.sectionHeader}><Star size={18} color="#FF9F1C" /> 기본 정보</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <Field label="장소명 *">
-                <input style={styles.input} type="text" required placeholder="예: 해피멍 카페 송도점"
+                <input style={styles.input} type="text" required placeholder="예: 멍스팟 카페 송도점"
                   value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
               </Field>
 
@@ -346,20 +346,20 @@ export default function SuggestPage() {
               <Info size={14} /> 주소가 정확한지 확인 후 상세 주소를 입력해 주세요.
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <input 
-                style={{ ...styles.input, flex: '1 1 300px', minWidth: '0' }} 
-                type="text" 
-                readOnly 
-                placeholder="버튼을 눌러 주소를 검색하세요" 
-                value={form.address} 
+              <input
+                style={{ ...styles.input, flex: '1 1 300px', minWidth: '0' }}
+                type="text"
+                readOnly
+                placeholder="버튼을 눌러 주소를 검색하세요"
+                value={form.address}
               />
               <div style={{ display: 'flex', gap: '8px', flex: '1 1 280px' }}>
                 <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1, minHeight: '44px' }}>
                   <MapPin size={16} /> 검색
                 </button>
-                <button 
-                  type="button" 
-                  onClick={useCurrentLocation} 
+                <button
+                  type="button"
+                  onClick={useCurrentLocation}
                   style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2, minHeight: '44px' }}
                   disabled={isLocating}
                 >
