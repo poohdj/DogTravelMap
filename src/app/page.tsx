@@ -136,6 +136,7 @@ export default function Home() {
   const handleSearchSelect = (place: Place) => {
     setSelectedPlace(place);
     setIsSearchOpen(false);
+    setIsListViewOpen(false);
     setSearchQuery('');
     if (map) {
       const pos = new window.kakao.maps.LatLng(place.lat, place.lng);
@@ -143,6 +144,36 @@ export default function Home() {
       map.setLevel(4);
     }
   };
+
+  const [isListViewOpen, setIsListViewOpen] = useState(false);
+
+  // 0. 필터링 로직 통합 (useMemo로 상시 개수 파악 가능하게 분리)
+  const filteredPlaces = useMemo(() => {
+    return places.filter(place => {
+      // 1. 카테고리 필터
+      if (activeCategory !== '전체' && place.category !== activeCategory) return false;
+      
+      // 2. 인증된 장소만 보기
+      if (dogFriendlyOnly && !place.isDogFriendly) return false;
+      
+      // 3. 하이브리드 속성 필터
+      const placeAllFeatures = [...(place.requirements || []), ...(place.facilities || [])];
+
+      if (conditionsFilter.length > 0) {
+        if (!conditionsFilter.every(f => placeAllFeatures.includes(f))) return false;
+      }
+
+      if (gearsFilter.length > 0) {
+        if (!gearsFilter.some(f => placeAllFeatures.includes(f))) return false;
+      }
+
+      if (facilitiesFilter.length > 0) {
+        if (!facilitiesFilter.every(f => placeAllFeatures.includes(f))) return false;
+      }
+      
+      return true;
+    });
+  }, [places, activeCategory, dogFriendlyOnly, conditionsFilter, gearsFilter, facilitiesFilter]);
 
   const toggleSearch = () => {
     setIsSearchOpen(prev => {
@@ -219,36 +250,7 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    // 복합 필터링 로직 (Hybrid AND/OR)
-    const filtered = places.filter(place => {
-      // 1. 카테고리 필터 (항상 AND)
-      if (activeCategory !== '전체' && place.category !== activeCategory) return false;
-      
-      // 2. 인증된 장소만 보기 필터 (항상 AND)
-      if (dogFriendlyOnly && !place.isDogFriendly) return false;
-      
-      // ⚠️ 중요: 하이브리드 필터 로직 ⚠️
-      const placeAllFeatures = [...(place.requirements || []), ...(place.facilities || [])];
-
-      // A. 아이 조건 필터 (AND) - 모두 충족해야 함
-      if (conditionsFilter.length > 0) {
-        if (!conditionsFilter.every(f => placeAllFeatures.includes(f))) return false;
-      }
-
-      // B. 보호자 준비물 필터 (OR) - 하나라도 충족하면 가용함
-      if (gearsFilter.length > 0) {
-        if (!gearsFilter.some(f => placeAllFeatures.includes(f))) return false;
-      }
-
-      // C. 장소 편의 시설 필터 (AND) - 모두 충족해야 함
-      if (facilitiesFilter.length > 0) {
-        if (!facilitiesFilter.every(f => placeAllFeatures.includes(f))) return false;
-      }
-      
-      return true;
-    });
-
-    filtered.forEach((place) => {
+    filteredPlaces.forEach((place) => {
       const position = new window.kakao.maps.LatLng(place.lat, place.lng);
       const marker = new window.kakao.maps.Marker({ position, clickable: true });
       marker.setMap(map);
@@ -261,12 +263,12 @@ export default function Home() {
 
     // 필터 변경 시 현재 선택된 장소가 필터링되어 사라졌다면 정보창 닫기
     if (selectedPlace) {
-      const isStillVisible = filtered.some(p => p.id === selectedPlace.id);
+      const isStillVisible = filteredPlaces.some(p => p.id === selectedPlace.id);
       if (!isStillVisible) setSelectedPlace(null);
     }
 
     return () => { markers.forEach(m => m.setMap(null)); };
-  }, [map, places, activeCategory, dogFriendlyOnly, conditionsFilter, gearsFilter, facilitiesFilter]);
+  }, [map, filteredPlaces]);
 
   // 4. Move to my current GPS location
   const goToMyLocation = useCallback(() => {
@@ -419,8 +421,12 @@ export default function Home() {
       </div>
 
       {/* Side Drawer Overlay */}
-      {(isDrawerOpen || isFilterOpen) && (
-        <div className="drawer-overlay" onClick={() => { setIsDrawerOpen(false); setIsFilterOpen(false); }} />
+      {(isDrawerOpen || isFilterOpen || isListViewOpen) && (
+        <div className="drawer-overlay" onClick={() => { 
+          setIsDrawerOpen(false); 
+          setIsFilterOpen(false); 
+          setIsListViewOpen(false);
+        }} />
       )}
 
       {/* Side Drawer */}
@@ -555,13 +561,53 @@ export default function Home() {
 
         <div className="drawer-footer">
           <button className="btn-primary" onClick={() => setIsFilterOpen(false)} style={{ width: '100%' }}>
-            필터 적용하기
+            {filteredPlaces.length}개의 장소 보기
           </button>
+        </div>
+      </div>
+
+      {/* List View Drawer */}
+      <div className={`side-drawer list-drawer ${isListViewOpen ? 'open' : ''}`}>
+        <div className="sheet-handle" />
+        <div className="drawer-header">
+          <div className="brand" style={{ fontSize: '1.1rem' }}>
+            <List size={20} color="var(--primary-color)" /> 장소 목록 ({filteredPlaces.length})
+          </div>
+          <button className="close-btn" onClick={() => setIsListViewOpen(false)}><X size={20} /></button>
+        </div>
+
+        <div className="drawer-content">
+          <div className="list-container">
+            {filteredPlaces.length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                필터에 맞는 장소가 없습니다. 🐾
+              </div>
+            ) : (
+              filteredPlaces.map(place => (
+                <div key={place.id} className="list-item-card" onClick={() => { handleSearchSelect(place); setIsListViewOpen(false); }}>
+                  <div className="list-item-info">
+                    <div className="list-item-category">{place.subCategory || place.category}</div>
+                    <div className="list-item-name">{place.name}</div>
+                    <div className="list-item-address">{place.address}</div>
+                    <div className="list-item-features">
+                      {[...(place.requirements || []), ...(place.facilities || [])].slice(0, 3).map(f => (
+                        <span key={f} className="feature-dot">{f}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <ChevronRight size={18} color="#E5E7EB" />
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
       {/* Floating Action Buttons */}
       <div className={`fab-container ${selectedPlace ? 'sheet-open' : ''}`}>
+        <button className="fab-btn list-toggle-btn" onClick={() => setIsListViewOpen(true)} title="목록 보기">
+          <List size={22} />
+        </button>
         <button
           className="fab-btn"
           aria-label="내 위치로 이동"

@@ -393,9 +393,10 @@ body:has(.admin-page-body) {
   transform: translateX(0);
 }
 
-/* Specific styling for the Filter Drawer (Responsive) */
+/* Specific styling for the Filter & List Drawer (Responsive) */
 @media (max-width: 640px) {
-  .filter-drawer.side-drawer {
+  .filter-drawer.side-drawer,
+  .list-drawer.side-drawer {
     top: auto;
     bottom: 0;
     right: 0;
@@ -407,14 +408,50 @@ body:has(.admin-page-body) {
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
   }
 
-  .filter-drawer.side-drawer.open {
+  .filter-drawer.side-drawer.open,
+  .list-drawer.side-drawer.open {
     transform: translateY(0);
   }
 
-  .filter-drawer .sheet-handle {
+  .filter-drawer .sheet-handle,
+  .list-drawer .sheet-handle {
     display: block;
   }
 }
+
+/* List View Container & Cards */
+.list-container {
+  padding: 8px 16px 40px;
+}
+
+.list-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px;
+  background: var(--white);
+  border: 1px solid #F1F5F9;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.list-item-card:hover { border-color: var(--primary-light); background: #FFFCF7; }
+.list-item-card:active { transform: scale(0.98); }
+
+.list-item-info { flex: 1; }
+.list-item-category { font-size: 0.72rem; font-weight: 700; color: var(--primary-color); background: #FFF8EE; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
+.list-item-name { font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
+.list-item-address { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+
+.list-item-features { display: flex; flex-wrap: wrap; gap: 6px; }
+.feature-dot { font-size: 0.7rem; font-weight: 600; color: #64748B; background: #F8FAFC; padding: 2px 7px; border-radius: 4px; }
+
+.list-drawer.side-drawer { z-index: 50; }
+
+.list-toggle-btn { background: var(--text-main) !important; color: white !important; }
+.list-toggle-btn:hover { background: #000 !important; }
 
 .drawer-content {
   flex: 1;
