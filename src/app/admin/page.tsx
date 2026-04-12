@@ -109,13 +109,28 @@ export default function AdminPage() {
 
   const loadSuggestions = async () => {
     setSuggestionLoading(true);
+    console.log('--- Loading Suggestions ---');
     try {
       const snap = await getDocs(collection(db, 'suggestions'));
+      console.log('Raw suggestions count:', snap.docs.length);
+      
       const data = snap.docs
-        .map(d => ({ id: d.id, ...d.data() } as Suggestion))
-        .filter(s => s.status === 'pending')
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        .map(d => {
+          const raw = d.data();
+          return { id: d.id, ...raw } as Suggestion;
+        })
+        .filter(s => {
+          const isPending = s.status === 'pending';
+          if (!isPending) console.log(`Skipping suggestion ${s.id}: status is ${s.status}`);
+          return isPending;
+        })
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      
+      console.log('Filtered suggestions (pending):', data.length);
       setSuggestions(data);
+    } catch (err) {
+      console.error('Error loading suggestions:', err);
+      alert('제안 목록을 불러오는 중 오류가 발생했습니다. 콘솔을 확인해 주세요.');
     } finally { setSuggestionLoading(false); }
   };
 
@@ -131,11 +146,19 @@ export default function AdminPage() {
 
   const loadFeedbacks = async () => {
     setFeedbacksLoading(true);
+    console.log('--- Loading Feedbacks ---');
     try {
       const snap = await getDocs(collection(db, 'feedbacks'));
+      console.log('Raw feedbacks count:', snap.docs.length);
+      
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      
+      console.log('Processed feedbacks:', data.length);
       setFeedbacks(data);
+    } catch (err) {
+      console.error('Error loading feedbacks:', err);
+      alert('피드백 목록을 불러오는 중 오류가 발생했습니다.');
     } finally { setFeedbacksLoading(false); }
   };
 
