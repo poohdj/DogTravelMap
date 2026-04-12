@@ -255,9 +255,19 @@ export default function Home() {
 
     const markers: any[] = [];
     
+    // 커스텀 마커 이미지 설정
+    const imageSrc = '/marker-paw.png';
+    const imageSize = new window.kakao.maps.Size(40, 40);
+    const imageOption = { offset: new window.kakao.maps.Point(20, 40) }; // 마커의 좌표와 일치시킬 이미지 안의 좌표 (하단 중앙)
+    const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
+
     filteredPlaces.forEach((place: Place) => {
       const position = new window.kakao.maps.LatLng(place.lat, place.lng);
-      const marker = new window.kakao.maps.Marker({ position, clickable: true });
+      const marker = new window.kakao.maps.Marker({ 
+        position, 
+        clickable: true,
+        image: markerImage // 커스텀 이미지 적용
+      });
       marker.setMap(map);
       markers.push(marker);
       window.kakao.maps.event.addListener(marker, 'click', () => {
