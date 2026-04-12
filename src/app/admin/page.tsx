@@ -193,32 +193,56 @@ export default function AdminPage() {
     }
 
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        if (window.kakao?.maps?.services) {
-          const geocoder = new window.kakao.maps.services.Geocoder();
-          geocoder.coord2Address(longitude, latitude, (result: any, status: any) => {
-            if (status === window.kakao.maps.services.Status.OK) {
-              const addr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
-              setForm(prev => ({ ...prev, address: addr, lat: String(latitude), lng: String(longitude) }));
-            } else {
-              alert('주소를 변환하는 데 실패했습니다.');
-            }
-            setIsLocating(false);
-          });
-        } else {
-          setForm(prev => ({ ...prev, lat: String(latitude), lng: String(longitude) }));
+
+    const options = { 
+      enableHighAccuracy: true, 
+      timeout: 10000, 
+      maximumAge: 60000 
+    };
+
+    const handleSuccess = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      if (window.kakao?.maps?.services) {
+        const geocoder = new window.kakao.maps.services.Geocoder();
+        geocoder.coord2Address(longitude, latitude, (result: any, status: any) => {
+          if (status === window.kakao.maps.services.Status.OK) {
+            const addr = result[0].road_address ? result[0].road_address.address_name : result[0].address.address_name;
+            setForm(prev => ({ ...prev, address: addr, lat: String(latitude), lng: String(longitude) }));
+          } else {
+            alert('주소를 변환하는 데 실패했습니다.');
+          }
           setIsLocating(false);
-        }
-      },
-      (err) => {
-        console.error('Admin Geolocation Error:', err);
-        alert('위치 정보를 가져올 수 없습니다. 브라우저의 위치 권한 설정을 확인해 주세요.');
+        });
+      } else {
+        setForm(prev => ({ ...prev, lat: String(latitude), lng: String(longitude) }));
         setIsLocating(false);
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
+      }
+    };
+
+    const handleError = (err: GeolocationPositionError) => {
+      if (options.enableHighAccuracy && (err.code === 3 || err.code === 2)) {
+        console.warn('Admin retrying with low accuracy...');
+        navigator.geolocation.getCurrentPosition(handleSuccess, handleFinalError, { 
+          ...options, 
+          enableHighAccuracy: false, 
+          timeout: 5000 
+        });
+      } else {
+        handleFinalError(err);
+      }
+    };
+
+    const handleFinalError = (err: GeolocationPositionError) => {
+      console.error('Admin Geolocation Error:', err.code, err.message);
+      let msg = '위치 정보를 가져올 수 없습니다.';
+      if (err.code === 1) msg = '위치 정보 접근 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.';
+      else if (err.code === 2) msg = '현재 위치 신호를 잡을 수 없습니다. (GPS/인터넷 연결을 확인하거나 주소를 직접 검색해 주세요)';
+      else if (err.code === 3) msg = '위치 확인 시간이 초과되었습니다. 다시 시도해 주세요.';
+      alert(msg);
+      setIsLocating(false);
+    };
+
+    navigator.geolocation.getCurrentPosition(handleSuccess, handleError, options);
   };
 
   const openAddressSearch = () => {
