@@ -64,22 +64,24 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   '기타': <Menu size={15} />,
 };
 
-const FACILITIES = [
-  '야외/테라스',
-  '단독룸/프라이빗',
-  '대형견 입장 가능',
+const DOG_CONDITIONS = [
   '오프리쉬(목줄해제) 가능',
-  '베이커리/간단한 식사',
-  '전용 주차장'
+  '대형견 입장 가능'
 ];
 
-const REQUIREMENTS = [
-  '리드줄 필수',
-  '실내 바닥 보행 금지(안고 있어야 함)',
-  '슬링백 지참',
-  '캐리어(하드/소프트) 필수',
-  '견모차(개모차) 필수',
-  '입마개 필수(맹견/예민견)'
+const GEAR_REQUIREMENTS = [
+  '리드줄만 있으면 OK',
+  '슬링백/가방 허용',
+  '캐리어(뚜껑 닫힘) 필수',
+  '개모차 필수',
+  '실내 바닥 보행 금지(안고 있어야 함)'
+];
+
+const PLACE_FACILITIES = [
+  '야외/테라스',
+  '단독룸/프라이빗',
+  '베이커리/간단한 식사',
+  '전용 주차장'
 ];
 
 export default function Home() {
@@ -92,9 +94,12 @@ export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [filterMode, setFilterMode] = useState<'AND' | 'OR'>('AND');
-  const [requirementsFilter, setRequirementsFilter] = useState<string[]>([]);
+  
+  // 개별 필터 상태
+  const [conditionsFilter, setConditionsFilter] = useState<string[]>([]);
+  const [gearsFilter, setGearsFilter] = useState<string[]>([]);
   const [facilitiesFilter, setFacilitiesFilter] = useState<string[]>([]);
+  
   const [dogFriendlyOnly, setDogFriendlyOnly] = useState(false);
   const myLocationMarkerRef = useRef<any>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -193,7 +198,7 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    // 복합 필터링 로직
+    // 복합 필터링 로직 (Hybrid AND/OR)
     const filtered = places.filter(place => {
       // 1. 카테고리 필터 (항상 AND)
       if (activeCategory !== '전체' && place.category !== activeCategory) return false;
@@ -201,20 +206,22 @@ export default function Home() {
       // 2. 인증된 장소만 보기 필터 (항상 AND)
       if (dogFriendlyOnly && !place.isDogFriendly) return false;
       
-      // 3. 세부 조건(규정/시설) 필터링
-      const selectedFilters = [...requirementsFilter, ...facilitiesFilter];
-      if (selectedFilters.length > 0) {
-        const placeFeatures = [...(place.requirements || []), ...(place.facilities || [])];
-        
-        if (filterMode === 'AND') {
-          // 모든 항목이 포함되어야 함
-          const hasAll = selectedFilters.every(f => placeFeatures.includes(f));
-          if (!hasAll) return false;
-        } else {
-          // 하나라도 포함되면 됨
-          const hasSome = selectedFilters.some(f => placeFeatures.includes(f));
-          if (!hasSome) return false;
-        }
+      // ⚠️ 중요: 하이브리드 필터 로직 ⚠️
+      const placeAllFeatures = [...(place.requirements || []), ...(place.facilities || [])];
+
+      // A. 아이 조건 필터 (AND) - 모두 충족해야 함
+      if (conditionsFilter.length > 0) {
+        if (!conditionsFilter.every(f => placeAllFeatures.includes(f))) return false;
+      }
+
+      // B. 보호자 준비물 필터 (OR) - 하나라도 충족하면 가용함
+      if (gearsFilter.length > 0) {
+        if (!gearsFilter.some(f => placeAllFeatures.includes(f))) return false;
+      }
+
+      // C. 장소 편의 시설 필터 (AND) - 모두 충족해야 함
+      if (facilitiesFilter.length > 0) {
+        if (!facilitiesFilter.every(f => placeAllFeatures.includes(f))) return false;
       }
       
       return true;
@@ -238,7 +245,7 @@ export default function Home() {
     }
 
     return () => { markers.forEach(m => m.setMap(null)); };
-  }, [map, places, activeCategory, dogFriendlyOnly, requirementsFilter, facilitiesFilter, filterMode]);
+  }, [map, places, activeCategory, dogFriendlyOnly, conditionsFilter, gearsFilter, facilitiesFilter]);
 
   // 4. Move to my current GPS location
   const goToMyLocation = useCallback(() => {
@@ -406,44 +413,15 @@ export default function Home() {
             <button 
               onClick={() => {
                 setDogFriendlyOnly(false);
-                setRequirementsFilter([]);
+                setConditionsFilter([]);
+                setGearsFilter([]);
                 setFacilitiesFilter([]);
-                setFilterMode('AND');
                 setActiveCategory('전체');
               }}
               style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
             >
               초기화
             </button>
-          </div>
-
-          <div style={{ marginBottom: '20px', background: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              🎯 필터 결합 방식
-            </div>
-            <div style={{ display: 'flex', background: '#E2E8F0', padding: '2px', borderRadius: '8px' }}>
-              <button 
-                onClick={() => setFilterMode('AND')}
-                style={{
-                  flex: 1, padding: '6px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer',
-                  background: filterMode === 'AND' ? '#fff' : 'transparent',
-                  color: filterMode === 'AND' ? 'var(--primary-color)' : 'var(--text-secondary)',
-                  boxShadow: filterMode === 'AND' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                }}
-              >모두 포함 (AND)</button>
-              <button 
-                onClick={() => setFilterMode('OR')}
-                style={{
-                  flex: 1, padding: '6px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer',
-                  background: filterMode === 'OR' ? '#fff' : 'transparent',
-                  color: filterMode === 'OR' ? 'var(--primary-color)' : 'var(--text-secondary)',
-                  boxShadow: filterMode === 'OR' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
-                }}
-              >하나라도 (OR)</button>
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', textAlign: 'center' }}>
-              {filterMode === 'AND' ? '선택한 모든 조건이 있는 곳만 표시' : '선택한 조건 중 하나라도 있는 곳 표시'}
-            </div>
           </div>
           
           <label className="drawer-toggle">
@@ -452,46 +430,75 @@ export default function Home() {
           </label>
           
           <div style={{ marginTop: '20px' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>🔖 동반 규정 필터 (AND)</div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🐾 우리 아이 조건 (AND)
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {REQUIREMENTS.map(req => (
-                <button key={req}
-                  onClick={() => setRequirementsFilter(prev =>
-                    prev.includes(req) ? prev.filter(r => r !== req) : [...prev, req]
+              {DOG_CONDITIONS.map(item => (
+                <button key={item}
+                  onClick={() => setConditionsFilter(prev =>
+                    prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
                   )}
                   style={{
-                    padding: '6px 12px', borderRadius: '999px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-                    background: requirementsFilter.includes(req) ? '#7C3AED' : '#F4F5F7',
-                    color: requirementsFilter.includes(req) ? '#fff' : 'var(--text-secondary)',
+                    padding: '6px 14px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                    background: conditionsFilter.includes(item) ? '#7C3AED' : '#F4F5F7',
+                    color: conditionsFilter.includes(item) ? '#fff' : 'var(--text-secondary)',
                     border: '1.5px solid',
-                    borderColor: requirementsFilter.includes(req) ? '#7C3AED' : '#E5E7EB',
+                    borderColor: conditionsFilter.includes(item) ? '#7C3AED' : '#E5E7EB',
                     fontFamily: 'inherit',
                   }}
                 >
-                  {req}
+                  {item}
                 </button>
               ))}
             </div>
           </div>
 
-          <div style={{ marginTop: '20px' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>✨ 장소 특징 필터 (AND)</div>
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              🔖 보호자 준비물 (OR)
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {FACILITIES.map(fac => (
-                <button key={fac}
-                  onClick={() => setFacilitiesFilter(prev =>
-                    prev.includes(fac) ? prev.filter(f => f !== fac) : [...prev, fac]
+              {GEAR_REQUIREMENTS.map(item => (
+                <button key={item}
+                  onClick={() => setGearsFilter(prev =>
+                    prev.includes(item) ? prev.filter(r => r !== item) : [...prev, item]
                   )}
                   style={{
-                    padding: '6px 12px', borderRadius: '999px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
-                    background: facilitiesFilter.includes(fac) ? '#059669' : '#F4F5F7',
-                    color: facilitiesFilter.includes(fac) ? '#fff' : 'var(--text-secondary)',
+                    padding: '6px 14px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                    background: gearsFilter.includes(item) ? '#4F46E5' : '#F4F5F7',
+                    color: gearsFilter.includes(item) ? '#fff' : 'var(--text-secondary)',
                     border: '1.5px solid',
-                    borderColor: facilitiesFilter.includes(fac) ? '#059669' : '#E5E7EB',
+                    borderColor: gearsFilter.includes(item) ? '#4F46E5' : '#E5E7EB',
                     fontFamily: 'inherit',
                   }}
                 >
-                  {fac}
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#374151', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              ✨ 장소 및 편의 시설 (AND)
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {PLACE_FACILITIES.map(item => (
+                <button key={item}
+                  onClick={() => setFacilitiesFilter(prev =>
+                    prev.includes(item) ? prev.filter(f => f !== item) : [...prev, item]
+                  )}
+                  style={{
+                    padding: '6px 14px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer',
+                    background: facilitiesFilter.includes(item) ? '#059669' : '#F4F5F7',
+                    color: facilitiesFilter.includes(item) ? '#fff' : 'var(--text-secondary)',
+                    border: '1.5px solid',
+                    borderColor: facilitiesFilter.includes(item) ? '#059669' : '#E5E7EB',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {item}
                 </button>
               ))}
             </div>
@@ -563,22 +570,34 @@ export default function Home() {
           </div>
 
           {/* 인증 상태 + 필요항목 */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
             {selectedPlace.isDogFriendly
-              ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#16A34A', background: '#F0FDF4', padding: '4px 10px', borderRadius: '999px', border: '1px solid #BBF7D0' }}>
+              ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: '#16A34A', background: '#F0FDF4', padding: '4px 12px', borderRadius: '999px', border: '1px solid #BBF7D0' }}>
                 <CheckCircle size={13} /> 멍스팟 확인 완료
               </span>
-              : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', background: '#F3F4F6', padding: '4px 10px', borderRadius: '999px', border: '1px solid #E5E7EB' }}>
+              : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', background: '#F3F4F6', padding: '4px 12px', borderRadius: '999px', border: '1px solid #E5E7EB' }}>
                 <AlertCircle size={13} /> 유저 제안 정보
               </span>
             }
-            {selectedPlace.requirements?.map(req => (
-              <span key={req} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7C3AED', background: '#F5F3FF', padding: '4px 10px', borderRadius: '999px', border: '1px solid #E0E7FF' }}>
-                🔖 {req}
-              </span>
-            ))}
-            {selectedPlace.facilities?.map(fac => (
-              <span key={fac} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#059669', background: '#ECFDF5', padding: '4px 10px', borderRadius: '999px', border: '1px solid #D1FAE5' }}>
+            
+            {(selectedPlace.requirements || []).map(req => {
+              const isAttention = req.includes('입마개');
+              return (
+                <span key={req} style={{ 
+                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700, 
+                  color: isAttention ? '#DC2626' : '#4F46E5', 
+                  background: isAttention ? '#FEF2F2' : '#EEF2FF', 
+                  padding: '4px 12px', borderRadius: '999px', 
+                  border: `1px solid ${isAttention ? '#FECACA' : '#C3DAFE'}`
+                }}>
+                  {isAttention && <AlertCircle size={13} />}
+                  {isAttention ? '주의: ' : '🔖 '}{req}
+                </span>
+              );
+            })}
+            
+            {(selectedPlace.facilities || []).map(fac => (
+              <span key={fac} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '4px 12px', borderRadius: '999px', border: '1px solid #D1FAE5' }}>
                 ✨ {fac}
               </span>
             ))}

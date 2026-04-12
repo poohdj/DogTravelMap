@@ -23,21 +23,31 @@ const CATEGORIES: Record<string, string[]> = {
   '기타': ['동물병원', '약국', '애견미용실', '반려용품점', '기타'],
 };
 
-const FACILITIES = [
+// 그룹 1: 우리 아이 조건 (기존의 FACILITIES 일부 + 새로운 분류)
+const DOG_CONDITIONS = [
+  '오프리쉬(목줄해제) 가능',
+  '대형견 입장 가능'
+];
+
+// 그룹 2: 보호자 준비물 (기존의 REQUIREMENTS 개편)
+const GEAR_REQUIREMENTS = [
+  '리드줄만 있으면 OK',
+  '슬링백/가방 허용',
+  '캐리어(뚜껑 닫힘) 필수',
+  '개모차 필수',
+  '실내 바닥 보행 금지(안고 있어야 함)'
+];
+
+// 그룹 3: 장소 및 편의 시설 (기존의 FACILITIES 일부)
+const PLACE_FACILITIES = [
   '야외/테라스',
   '단독룸/프라이빗',
-  '대형견 입장 가능',
-  '오프리쉬(목줄해제) 가능',
   '베이커리/간단한 식사',
   '전용 주차장'
 ];
 
-const REQUIREMENTS = [
-  '리드줄 필수',
-  '실내 바닥 보행 금지(안고 있어야 함)',
-  '슬링백 지참',         // 머리가 노출될 수 있는 형태
-  '캐리어(하드/소프트) 필수', // 뚜껑이 닫히는 형태
-  '견모차(개모차) 필수',
+// 기타/주의사항 (필터에서는 제외되나 데이터로는 유지)
+const ATTENTION_ITEMS = [
   '입마개 필수(맹견/예민견)'
 ];
 
@@ -445,23 +455,39 @@ export default function AdminPage() {
                   style={!form.isDogFriendly ? { ...styles.pillActive, background: '#6B7280', border: '1.5px solid #6B7280' } : styles.pill}>❓ 미검증 / 유저제안</button>
               </div>
             </Field>
-            <Field label="동반 규정 (복수 선택 가능)">
+            <Field label="우리 아이 조건 (복수 선택)">
               <div style={styles.pillGroup}>
-                {REQUIREMENTS.map(req => (
-                  <button key={req} type="button" onClick={() => toggleRequirement(req)}
-                    style={form.requirements.includes(req) ? { ...styles.pillActive, background: '#7C3AED', border: '1.5px solid #7C3AED' } : styles.pill}>🔖 {req}</button>
+                {DOG_CONDITIONS.map(item => (
+                  <button key={item} type="button" onClick={() => toggleRequirement(item)}
+                    style={form.requirements.includes(item) ? { ...styles.pillActive, background: '#7C3AED', border: '1.5px solid #7C3AED' } : styles.pill}>🐾 {item}</button>
                 ))}
               </div>
             </Field>
-            <Field label="장소 특징 (복수 선택 가능)">
+            <Field label="보호자 준비물 (복수 선택)">
               <div style={styles.pillGroup}>
-                {FACILITIES.map(fac => (
+                {GEAR_REQUIREMENTS.map(item => (
+                  <button key={item} type="button" onClick={() => toggleRequirement(item)}
+                    style={form.requirements.includes(item) ? { ...styles.pillActive, background: '#4F46E5', border: '1.5px solid #4F46E5' } : styles.pill}>🔖 {item}</button>
+                ))}
+              </div>
+            </Field>
+            <Field label="장소 특징 및 편의 시설 (복수 선택)">
+              <div style={styles.pillGroup}>
+                {PLACE_FACILITIES.map(fac => (
                   <button key={fac} type="button"
                     onClick={() => setForm(p => ({
                       ...p,
                       facilities: p.facilities.includes(fac) ? p.facilities.filter(f => f !== fac) : [...p.facilities, fac]
                     }))}
                     style={form.facilities.includes(fac) ? { ...styles.pillActive, background: '#059669', border: '1.5px solid #059669' } : styles.pill}>✨ {fac}</button>
+                ))}
+              </div>
+            </Field>
+            <Field label="기타 주의사항 (복수 선택)">
+              <div style={styles.pillGroup}>
+                {ATTENTION_ITEMS.map(item => (
+                  <button key={item} type="button" onClick={() => toggleRequirement(item)}
+                    style={form.requirements.includes(item) ? { ...styles.pillActive, background: '#DC2626', border: '1.5px solid #DC2626' } : styles.pill}>⚠️ {item}</button>
                 ))}
               </div>
             </Field>
