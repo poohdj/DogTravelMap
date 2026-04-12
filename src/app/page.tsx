@@ -255,10 +255,10 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    // 커스텀 마커 이미지 설정
-    const imageSrc = '/marker-paw.png';
+    // 커스텀 마커 이미지 설정 (강아지 발바닥 SVG 아이콘)
+    const imageSrc = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><path fill="%23FF9F1C" d="M20 2C12.27 2 6 8.27 6 16c0 8.4 12 19.2 12 19.2s12-10.8 12-19.2c0-7.73-6.27-14-14-14z"/><circle fill="white" cx="20" cy="16" r="6"/><path fill="%23FF9F1C" d="M20 13c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm-3.38 1.5c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm6.75 0c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm-3.38 3.75c-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5-1.12-2.5-2.5-2.5z"/></svg>`;
     const imageSize = new window.kakao.maps.Size(40, 40);
-    const imageOption = { offset: new window.kakao.maps.Point(20, 40) }; // 마커의 좌표와 일치시킬 이미지 안의 좌표 (하단 중앙)
+    const imageOption = { offset: new window.kakao.maps.Point(20, 40) }; 
     const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
 
     filteredPlaces.forEach((place: Place) => {
@@ -334,7 +334,7 @@ export default function Home() {
   return (
     <main className="map-container">
       {/* Map Rendering Container */}
-      <div id="kakao-map" ref={mapRef}></div>
+      <div id="kakao-map" ref={mapRef} tabIndex={0}></div>
 
       {/* UI Overlay Layer (Header + Categories + FAB) */}
       <div className="ui-layer">
