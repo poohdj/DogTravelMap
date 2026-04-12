@@ -48,6 +48,10 @@ export const metadata: Metadata = {
   other: {
     'naver-site-verification': 'cf6694632f05ff2cb8e391744f63666c7225ea61',
   },
+  icons: {
+    icon: '/icon.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({
