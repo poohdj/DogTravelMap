@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { signInWithPopup, onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { db, auth, googleProvider } from '@/lib/firebase';
-import { MapPin, Plus, CheckCircle, Loader, LogOut, LogIn, Clock, Check, X, Pencil, Trash2, List } from 'lucide-react';
+import { MapPin, Plus, CheckCircle, Loader, LogOut, LogIn, Clock, Check, X, Pencil, Trash2, List, AlertCircle } from 'lucide-react';
 
 declare global {
   interface Window { kakao: any; daum: any; }
@@ -61,10 +61,15 @@ type Suggestion = {
   submittedBy?: string; status: string; createdAt: string;
 };
 
+type Feedback = {
+  id: string; placeId: string; placeName: string; type: string;
+  message: string; createdAt: string;
+};
+
 export default function AdminPage() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [tab, setTab] = useState<'add' | 'suggestions' | 'manage'>('add');
+  const [tab, setTab] = useState<'add' | 'suggestions' | 'manage' | 'feedbacks'>('add');
 
   // 폼 상태
   const [form, setForm] = useState(defaultForm);
@@ -82,6 +87,10 @@ export default function AdminPage() {
   const [manageLoading, setManageLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Place | null>(null); // 삭제 확인 모달용
 
+  // 피드백 목록
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [feedbacksLoading, setFeedbacksLoading] = useState(false);
+
   // Auth state
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -95,6 +104,7 @@ export default function AdminPage() {
     if (!ADMIN_EMAILS.includes(user?.email ?? '')) return;
     if (tab === 'suggestions') loadSuggestions();
     if (tab === 'manage') loadManagePlaces();
+    if (tab === 'feedbacks') loadFeedbacks();
   }, [tab, user]);
 
   const loadSuggestions = async () => {
@@ -113,9 +123,20 @@ export default function AdminPage() {
     setManageLoading(true);
     try {
       const snap = await getDocs(collection(db, 'places'));
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Place));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Place))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setManagePlaces(data);
     } finally { setManageLoading(false); }
+  };
+
+  const loadFeedbacks = async () => {
+    setFeedbacksLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'feedbacks'));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback))
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      setFeedbacks(data);
+    } finally { setFeedbacksLoading(false); }
   };
 
   // 수정 버튼 클릭 → 폼에 데이터 채우고 add 탭으로 이동
@@ -138,6 +159,30 @@ export default function AdminPage() {
     setSuccess(false);
     setError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // 피드백에서 관련 장소 수정으로 이동
+  const handleEditFromFeedback = async (placeId: string) => {
+    const p = managePlaces.find(x => x.id === placeId);
+    if (p) {
+      handleEdit(p);
+    } else {
+      // 리스트에 없으면 (아직 로드 전이면) 직접 로드 시도
+      alert('장소 데이터를 찾는 중입니다...');
+      loadManagePlaces().then(() => {
+        const p2 = managePlaces.find(x => x.id === placeId);
+        if (p2) handleEdit(p2);
+        else alert('해당 장소를 찾을 수 없거나 이미 삭제되었습니다.');
+      });
+    }
+  };
+
+  const handleDeleteFeedback = async (id: string) => {
+    if (!confirm('이 피드백을 삭제(처리 완료)하시겠습니까?')) return;
+    try {
+      await deleteDoc(doc(db, 'feedbacks', id));
+      setFeedbacks(prev => prev.filter(f => f.id !== id));
+    } catch { alert('피드백 삭제 중 오류가 발생했습니다.'); }
   };
 
   // 삭제 확인
@@ -321,6 +366,10 @@ export default function AdminPage() {
             style={{ ...styles.tabBtn, ...(tab === 'suggestions' ? styles.tabActive : {}) }}>
             <Clock size={14} /> 제안 검토 {suggestions.length > 0 && `(${suggestions.length})`}
           </button>
+          <button onClick={() => setTab('feedbacks')}
+            style={{ ...styles.tabBtn, ...(tab === 'feedbacks' ? styles.tabActive : {}) }}>
+            <AlertCircle size={14} /> 유저 피드백 {feedbacks.length > 0 && `(${feedbacks.length})`}
+          </button>
         </div>
 
         {/* Tab: 장소 추가/수정 */}
@@ -473,6 +522,51 @@ export default function AdminPage() {
                     <div style={{ fontSize: '0.85rem', color: '#555' }}>📍 {s.address} {s.addressDetail && `(${s.addressDetail})`}</div>
                     {s.notes && <div style={{ fontSize: '0.82rem', color: '#9094A6', background: '#F9F9F9', borderRadius: '6px', padding: '8px' }}>{s.notes}</div>}
                     {s.submittedBy && <div style={{ fontSize: '0.78rem', color: '#9094A6' }}>제안자: {s.submittedBy}</div>}
+                  </div>
+                ))
+            }
+          </div>
+        )}
+
+        {/* Tab: 유저 피드백 */}
+        {tab === 'feedbacks' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.88rem', color: '#9094A6' }}>총 {feedbacks.length}개의 피드백</span>
+              <button onClick={loadFeedbacks} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#9094A6', fontFamily: 'inherit' }}>↻ 새로고침</button>
+            </div>
+            {feedbacksLoading
+              ? <div style={{ textAlign: 'center', padding: '40px', color: '#9094A6' }}><Loader size={24} style={{ animation: 'spin 1s linear infinite' }} /></div>
+              : feedbacks.length === 0
+                ? <div style={{ textAlign: 'center', padding: '40px', color: '#9094A6', fontSize: '0.95rem' }}>접수된 피드백이 없습니다.</div>
+                : feedbacks.map(f => (
+                  <div key={f.id} style={{ border: '1px solid #FFE4E6', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', background: '#FFFBFB' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ 
+                            fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '4px',
+                            background: f.type === 'delete' ? '#FECACA' : f.type === 'correction' ? '#DBEAFE' : '#F3F4F6',
+                            color: f.type === 'delete' ? '#DC2626' : f.type === 'correction' ? '#2563EB' : '#6B7280'
+                          }}>
+                            {f.type === 'delete' ? '폐업/삭제' : f.type === 'correction' ? '정보수정' : '기타'}
+                          </span>
+                          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{f.placeName}</span>
+                        </div>
+                        <div style={{ fontSize: '0.88rem', color: '#2D3142', lineHeight: 1.5, background: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                          {f.message}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#9094A6', marginTop: '6px' }}>접수일: {f.createdAt.split('T')[0]}</div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <button onClick={() => handleEditFromFeedback(f.placeId)} style={{ background: '#EEF2FF', color: '#4F46E5', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}>
+                          장소 수정
+                        </button>
+                        <button onClick={() => handleDeleteFeedback(f.id)} style={{ background: '#F4F5F7', color: '#6B7280', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit' }}>
+                          삭제
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))
             }
