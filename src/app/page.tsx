@@ -92,6 +92,7 @@ export default function Home() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [filterMode, setFilterMode] = useState<'AND' | 'OR'>('AND');
   const [requirementsFilter, setRequirementsFilter] = useState<string[]>([]);
   const [facilitiesFilter, setFacilitiesFilter] = useState<string[]>([]);
   const [dogFriendlyOnly, setDogFriendlyOnly] = useState(false);
@@ -186,7 +187,7 @@ export default function Home() {
     }
   }, []);
 
-  // 3. Render Markers - 모든 필터 반영 (AND 조건)
+  // 3. Render Markers - 모든 필터 반영
   useEffect(() => {
     if (!map || places.length === 0) return;
 
@@ -194,22 +195,26 @@ export default function Home() {
     
     // 복합 필터링 로직
     const filtered = places.filter(place => {
-      // 1. 카테고리 필터
+      // 1. 카테고리 필터 (항상 AND)
       if (activeCategory !== '전체' && place.category !== activeCategory) return false;
       
-      // 2. 애견동반 가능 상태 필터
+      // 2. 인증된 장소만 보기 필터 (항상 AND)
       if (dogFriendlyOnly && !place.isDogFriendly) return false;
       
-      // 3. 동반 규정 필터 (선택한 모든 항목을 만족해야 함 - AND)
-      if (requirementsFilter.length > 0) {
-        const hasAllReqs = requirementsFilter.every(req => place.requirements?.includes(req));
-        if (!hasAllReqs) return false;
-      }
-      
-      // 4. 장소 특징 필터 (선택한 모든 항목을 만족해야 함 - AND)
-      if (facilitiesFilter.length > 0) {
-        const hasAllFacs = facilitiesFilter.every(fac => place.facilities?.includes(fac));
-        if (!hasAllFacs) return false;
+      // 3. 세부 조건(규정/시설) 필터링
+      const selectedFilters = [...requirementsFilter, ...facilitiesFilter];
+      if (selectedFilters.length > 0) {
+        const placeFeatures = [...(place.requirements || []), ...(place.facilities || [])];
+        
+        if (filterMode === 'AND') {
+          // 모든 항목이 포함되어야 함
+          const hasAll = selectedFilters.every(f => placeFeatures.includes(f));
+          if (!hasAll) return false;
+        } else {
+          // 하나라도 포함되면 됨
+          const hasSome = selectedFilters.some(f => placeFeatures.includes(f));
+          if (!hasSome) return false;
+        }
       }
       
       return true;
@@ -233,7 +238,7 @@ export default function Home() {
     }
 
     return () => { markers.forEach(m => m.setMap(null)); };
-  }, [map, places, activeCategory, dogFriendlyOnly, requirementsFilter, facilitiesFilter]);
+  }, [map, places, activeCategory, dogFriendlyOnly, requirementsFilter, facilitiesFilter, filterMode]);
 
   // 4. Move to my current GPS location
   const goToMyLocation = useCallback(() => {
@@ -403,12 +408,42 @@ export default function Home() {
                 setDogFriendlyOnly(false);
                 setRequirementsFilter([]);
                 setFacilitiesFilter([]);
+                setFilterMode('AND');
                 setActiveCategory('전체');
               }}
               style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
             >
               초기화
             </button>
+          </div>
+
+          <div style={{ marginBottom: '20px', background: '#F8FAFC', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🎯 필터 결합 방식
+            </div>
+            <div style={{ display: 'flex', background: '#E2E8F0', padding: '2px', borderRadius: '8px' }}>
+              <button 
+                onClick={() => setFilterMode('AND')}
+                style={{
+                  flex: 1, padding: '6px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer',
+                  background: filterMode === 'AND' ? '#fff' : 'transparent',
+                  color: filterMode === 'AND' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                  boxShadow: filterMode === 'AND' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                }}
+              >모두 포함 (AND)</button>
+              <button 
+                onClick={() => setFilterMode('OR')}
+                style={{
+                  flex: 1, padding: '6px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, border: 'none', cursor: 'pointer',
+                  background: filterMode === 'OR' ? '#fff' : 'transparent',
+                  color: filterMode === 'OR' ? 'var(--primary-color)' : 'var(--text-secondary)',
+                  boxShadow: filterMode === 'OR' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+                }}
+              >하나라도 (OR)</button>
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '6px', textAlign: 'center' }}>
+              {filterMode === 'AND' ? '선택한 모든 조건이 있는 곳만 표시' : '선택한 조건 중 하나라도 있는 곳 표시'}
+            </div>
           </div>
           
           <label className="drawer-toggle">
