@@ -255,15 +255,15 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    // 커스텀 마커 이미지 설정 (밤콩이 테마 - 블랙 & 화이트, 4발가락)
+    // 커스텀 마커 이미지 설정 (주황색 테마 - 4발가락, 시인성 강화)
     const svgIcon = `
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-        <!-- Black Pin Shape -->
-        <path fill="#000000" d="M20 38c-0.8 0-11-13-11-22 0-6.1 4.9-11 11-11s11 4.9 11 11c0 9-10.2 22-11 22z"/>
+        <!-- Orange Pin Shape -->
+        <path fill="#FF9F1C" d="M20 38c-0.8 0-11-13-11-22 0-6.1 4.9-11 11-11s11 4.9 11 11c0 9-10.2 22-11 22z"/>
         <!-- White Circle Background for Paw -->
         <circle fill="white" cx="20" cy="16" r="7.5"/>
-        <!-- 4-Toe Paw Print in Black -->
-        <g fill="#000000">
+        <!-- 4-Toe Paw Print in Orange -->
+        <g fill="#FF9F1C">
           <ellipse cx="17.5" cy="12.5" rx="1.5" ry="2"/> 
           <ellipse cx="22.5" cy="12.5" rx="1.5" ry="2"/>
           <ellipse cx="14.5" cy="14.5" rx="1.5" ry="2" transform="rotate(-30 14.5 14.5)"/>
