@@ -212,6 +212,11 @@ export default function Home() {
         const center = new window.kakao.maps.LatLng(lat, lng);
         const options = { center, level };
         const newMap = new window.kakao.maps.Map(mapRef.current, options);
+        
+        // Explicitly enable interactions for some mobile browsers
+        newMap.setDraggable(true);
+        newMap.setZoomable(true);
+        
         setMap(newMap);
       });
     };

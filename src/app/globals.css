@@ -53,6 +53,7 @@ body:has(.admin-page-body) {
   width: 100%;
   height: 100%;
   z-index: 0;
+  touch-action: none !important;
 }
 
 /* UI Layer overlaying the map */
