@@ -317,7 +317,7 @@ export default function SuggestPage() {
             <div style={styles.sectionHeader}><Star size={18} color="#FF9F1C" /> 기본 정보</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <Field label="장소명 *">
-                <input style={styles.input} type="text" required placeholder="예: 멍스팟 카페 송도점"
+                <input style={styles.input} type="text" required placeholder="예: 멍스팟 카페 샌프란시스코점"
                   value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} />
               </Field>
 
