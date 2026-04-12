@@ -99,8 +99,7 @@ export default function SuggestPage() {
     
     setLoading(true);
     try {
-      console.log('Submitting suggestion...', form);
-      const docRef = await addDoc(collection(db, 'suggestions'), {
+      await addDoc(collection(db, 'suggestions'), {
         name: form.name.trim(), 
         category: form.category, 
         subCategory: form.subCategory,
@@ -116,7 +115,6 @@ export default function SuggestPage() {
         status: 'pending',
         createdAt: new Date().toISOString(),
       });
-      console.log('Suggestion saved with ID:', docRef.id);
       setDone(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {

@@ -82,19 +82,18 @@ export default function AdminPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
 
+  // 장소 관리 목록
+  const [managePlaces, setManagePlaces] = useState<Place[]>([]);
   const [manageLoading, setManageLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Place | null>(null); // 삭제 확인 모달용
+
+  // 장소 관리 검색/필터 상태
+  const [manageSearch, setManageSearch] = useState('');
+  const [manageCategory, setManageCategory] = useState('전체');
 
   // 피드백 목록
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
-
-  // --- 디버깅용 상태 ---
-  const [rawSuggestionsCount, setRawSuggestionsCount] = useState<number | null>(null);
-  const [rawFeedbacksCount, setRawFeedbacksCount] = useState<number | null>(null);
-  const [lastError, setLastError] = useState<string | null>(null);
-  const [debugData, setDebugData] = useState<any>(null);
-  const [showDebug, setShowDebug] = useState(false);
 
   // Auth state
   useEffect(() => {
@@ -114,25 +113,19 @@ export default function AdminPage() {
 
   const loadSuggestions = async () => {
     setSuggestionLoading(true);
-    setLastError(null);
     try {
       const snap = await getDocs(collection(db, 'suggestions'));
-      setRawSuggestionsCount(snap.docs.length);
-      
-      const allData = snap.docs.map(d => ({ id: d.id, ...d.data() } as Suggestion));
-      setDebugData({ suggestions: allData });
-      
-      const filtered = allData
+      const data = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as Suggestion))
         .filter(s => {
           const status = (s.status || '').toLowerCase().trim();
-          return status === 'pending' || !s.status; // status가 없어도 일단 보여줌
+          return status === 'pending' || !s.status;
         })
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       
-      setSuggestions(filtered);
-    } catch (err: any) {
+      setSuggestions(data);
+    } catch (err) {
       console.error('Error loading suggestions:', err);
-      setLastError(`제안 로드 실패: ${err.message || '알 수 없는 오류'}`);
     } finally { setSuggestionLoading(false); }
   };
 
@@ -146,20 +139,26 @@ export default function AdminPage() {
     } finally { setManageLoading(false); }
   };
 
+  // 장소 관리 탭 필터링 로직
+  const filteredManagePlaces = managePlaces.filter(place => {
+    const matchesSearch = !manageSearch || 
+      place.name.toLowerCase().includes(manageSearch.toLowerCase()) ||
+      place.address.toLowerCase().includes(manageSearch.toLowerCase());
+    
+    const matchesCategory = manageCategory === '전체' || place.category === manageCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+
   const loadFeedbacks = async () => {
     setFeedbacksLoading(true);
-    setLastError(null);
     try {
       const snap = await getDocs(collection(db, 'feedbacks'));
-      setRawFeedbacksCount(snap.docs.length);
-      
-      const allData = snap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback));
-      
-      const sorted = allData.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-      setFeedbacks(sorted);
-    } catch (err: any) {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setFeedbacks(data);
+    } catch (err) {
       console.error('Error loading feedbacks:', err);
-      setLastError(`피드백 로드 실패: ${err.message || '알 수 없는 오류'}`);
     } finally { setFeedbacksLoading(false); }
   };
 
@@ -396,25 +395,6 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Debug Info Bar */}
-        {(rawSuggestionsCount !== null || rawFeedbacksCount !== null || lastError) && (
-          <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '10px', fontSize: '0.78rem', display: 'flex', flexWrap: 'wrap', gap: '12px', border: '1px solid #E2E8F0', alignItems: 'center' }}>
-            <div style={{ color: '#64748B', fontWeight: 700 }}>🔍 디버그 정보:</div>
-            {tab === 'suggestions' && <span>제안(DB: {rawSuggestionsCount}, 표시: {suggestions.length})</span>}
-            {tab === 'feedbacks' && <span>피드백(DB: {rawFeedbacksCount}, 표시: {feedbacks.length})</span>}
-            {lastError && <span style={{ color: '#DC2626', fontWeight: 800 }}>⚠️ {lastError}</span>}
-            <button onClick={() => setShowDebug(!showDebug)} style={{ background: '#2D3142', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
-              {showDebug ? '덤프 닫기' : '원본 데이터(JSON) 보기'}
-            </button>
-          </div>
-        )}
-
-        {showDebug && debugData && (
-          <div style={{ background: '#1E293B', color: '#CBD5E1', padding: '16px', borderRadius: '12px', fontSize: '0.75rem', maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace' }}>
-            <pre>{JSON.stringify(debugData, null, 2)}</pre>
-          </div>
-        )}
-
         {/* Tab: 장소 추가/수정 */}
         {tab === 'add' && (
           <form onSubmit={handleSubmit} style={styles.form}>
@@ -505,16 +485,72 @@ export default function AdminPage() {
 
         {/* Tab: 장소 관리 */}
         {tab === 'manage' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.88rem', color: '#9094A6' }}>총 {managePlaces.length}개의 장소</span>
-              <button onClick={loadManagePlaces} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#9094A6', fontFamily: 'inherit' }}>↻ 새로고침</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* Search & Filter Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
+                <input 
+                  style={{ ...styles.input, paddingLeft: '40px', background: '#fff' }} 
+                  placeholder="장소명 또는 주소 검색..."
+                  value={manageSearch}
+                  onChange={e => setManageSearch(e.target.value)}
+                />
+                {manageSearch && (
+                  <button 
+                    onClick={() => setManageSearch('')}
+                    style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {['전체', ...Object.keys(CATEGORIES)].map(cat => (
+                  <button 
+                    key={cat}
+                    onClick={() => setManageCategory(cat)}
+                    style={{
+                      padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      background: manageCategory === cat ? '#2D3142' : '#fff',
+                      color: manageCategory === cat ? '#fff' : '#64748B',
+                      border: '1px solid',
+                      borderColor: manageCategory === cat ? '#2D3142' : '#E2E8F0',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.88rem', color: '#64748B' }}>
+                총 {managePlaces.length}개 중 <strong>{filteredManagePlaces.length}개</strong> 검색됨
+                {(manageSearch || manageCategory !== '전체') && (
+                  <button 
+                    onClick={() => { setManageSearch(''); setManageCategory('전체'); }}
+                    style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#FF9F1C', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    필터 초기화
+                  </button>
+                )}
+              </div>
+              <button onClick={loadManagePlaces} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#9094A6', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Loader size={12} /> {manageLoading ? '동기화 중...' : '새로고침'}
+              </button>
+            </div>
+
             {manageLoading
               ? <div style={{ textAlign: 'center', padding: '40px', color: '#9094A6' }}><Loader size={24} style={{ animation: 'spin 1s linear infinite' }} /></div>
-              : managePlaces.length === 0
-                ? <div style={{ textAlign: 'center', padding: '40px', color: '#9094A6', fontSize: '0.95rem' }}>등록된 장소가 없습니다.</div>
-                : managePlaces.map(place => (
+              : filteredManagePlaces.length === 0
+                ? <div style={{ textAlign: 'center', padding: '60px 40px', background: '#F8FAFC', borderRadius: '20px', color: '#94A3B8', fontSize: '0.95rem' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
+                    검색 결과가 없습니다.
+                  </div>
+                : filteredManagePlaces.map(place => (
                   <div key={place.id} style={{ border: '1px solid #E5E7EB', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{place.name}</div>
