@@ -406,30 +406,7 @@ export default function AdminPage() {
     } catch { alert('거절 처리 중 오류가 발생했습니다.'); }
   };
 
-  // 카카오 주소 검색
-  const openAddressSearch = () => {
-    const runSearch = () => {
-      new window.daum.Postcode({
-        oncomplete: (data: any) => {
-          const fullAddress = data.roadAddress || data.jibunAddress;
-          setForm(prev => ({ ...prev, address: fullAddress }));
-          ensureKakaoLoaded(() => {
-            const geocoder = new window.kakao.maps.services.Geocoder();
-            geocoder.addressSearch(fullAddress, (result: any, status: any) => {
-              if (status === window.kakao.maps.services.Status.OK)
-                setForm(prev => ({ ...prev, lat: result[0].y, lng: result[0].x }));
-            });
-          });
-        },
-      }).open();
-    };
-    if (!window.daum?.Postcode) {
-      const s = document.createElement('script');
-      s.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
-      s.onload = runSearch;
-      document.head.appendChild(s);
-    } else runSearch();
-  };
+
 
   const toggleRequirement = (req: string) =>
     setForm(prev => ({
