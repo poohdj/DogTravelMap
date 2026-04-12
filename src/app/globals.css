@@ -443,7 +443,7 @@ body:has(.admin-page-body) {
 .list-item-info { flex: 1; }
 .list-item-category { font-size: 0.72rem; font-weight: 700; color: var(--primary-color); background: #FFF8EE; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px; }
 .list-item-name { font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px; }
-.list-item-address { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.list-item-address { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 
 .list-item-features { display: flex; flex-wrap: wrap; gap: 6px; }
 .feature-dot { font-size: 0.7rem; font-weight: 600; color: #64748B; background: #F8FAFC; padding: 2px 7px; border-radius: 4px; }
