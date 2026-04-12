@@ -59,6 +59,7 @@ export default function SuggestPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [error, setError] = useState('');
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
