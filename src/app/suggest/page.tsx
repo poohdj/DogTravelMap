@@ -116,7 +116,7 @@ export default function SuggestPage() {
     if (window.kakao?.maps) {
       window.kakao.maps.load(initMap);
     }
-    
+
     const timer = setTimeout(() => {
       if (mapInstanceRef.current) mapInstanceRef.current.relayout();
     }, 100);
@@ -166,7 +166,7 @@ export default function SuggestPage() {
         alert('위치 정보를 가져올 수 없습니다. 브라우저의 위치 권한 설정을 확인해 주세요.');
         setIsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 10000 }
     );
   };
 
@@ -176,7 +176,7 @@ export default function SuggestPage() {
         oncomplete: (data: any) => {
           const fullAddress = data.roadAddress || data.jibunAddress;
           setForm(prev => ({ ...prev, address: fullAddress }));
-          
+
           const runKakaoSearch = () => {
             if (!window.kakao?.maps?.services) return;
             const geocoder = new window.kakao.maps.services.Geocoder();
@@ -217,24 +217,24 @@ export default function SuggestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     if (!form.name.trim()) { setError('장소 이름을 입력해 주세요.'); return; }
     if (!form.lat || !form.lng) { setError('주소 검색을 통해 정확한 위치를 지정해 주세요.'); return; }
-    
+
     setLoading(true);
     try {
       await addDoc(collection(db, 'suggestions'), {
-        name: form.name.trim(), 
-        category: form.category, 
+        name: form.name.trim(),
+        category: form.category,
         subCategory: form.subCategory,
-        address: form.address, 
+        address: form.address,
         addressDetail: form.addressDetail.trim(),
-        lat: parseFloat(form.lat), 
+        lat: parseFloat(form.lat),
         lng: parseFloat(form.lng),
-        isDogFriendly: form.isDogFriendly, 
+        isDogFriendly: form.isDogFriendly,
         requirements: form.requirements,
         facilities: form.facilities,
-        notes: form.notes.trim(), 
+        notes: form.notes.trim(),
         submittedBy: form.submittedBy.trim() || '익명 제안자',
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -274,7 +274,7 @@ export default function SuggestPage() {
   return (
     <div style={styles.page} className="admin-page-body">
       <div style={{ ...styles.card, background: 'transparent', boxShadow: 'none', padding: 0, gap: '32px' }}>
-        
+
         {/* Header Section */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'center' }}>
           <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -288,7 +288,7 @@ export default function SuggestPage() {
         </div>
 
         <form onSubmit={handleSubmit} style={styles.form}>
-          
+
           {/* Section 1: Basic Info */}
           <section style={styles.sectionCard}>
             <div style={styles.sectionHeader}><Star size={18} color="#FF9F1C" /> 기본 정보</div>
@@ -322,35 +322,51 @@ export default function SuggestPage() {
             <div style={{ marginBottom: '8px', fontSize: '0.8rem', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Info size={14} /> 주소가 정확한지 확인 후 상세 주소를 입력해 주세요.
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input style={{ ...styles.input, flex: 1 }} type="text" readOnly placeholder="버튼을 눌러 주소를 검색하세요" value={form.address} />
-              <button type="button" onClick={openAddressSearch} style={styles.searchBtn}><MapPin size={16} /> 검색</button>
-              <button 
-                type="button" 
-                onClick={useCurrentLocation} 
-                style={{ ...styles.searchBtn, background: '#7C3AED' }}
-                disabled={isLocating}
-              >
-                {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
-                {isLocating ? '확인 중...' : '현 위치'}
-              </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <input
+                style={{ ...styles.input, flex: '1 1 200px', minWidth: '0' }}
+                type="text"
+                readOnly
+                placeholder="버튼을 눌러 주소를 검색하세요"
+                value={form.address}
+              />
+              <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto' }}>
+                <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1 }}>
+                  <MapPin size={16} /> 검색
+                </button>
+                <button
+                  type="button"
+                  onClick={useCurrentLocation}
+                  style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2 }}
+                  disabled={isLocating}
+                >
+                  {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
+                  <span style={{ marginLeft: '4px' }}>{isLocating ? '확인 중...' : '현 위치'}</span>
+                </button>
+              </div>
             </div>
-            {form.lat && <div style={{ fontSize: '0.8rem', color: '#16A34A', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4' }}> <ShieldCheck size={14}/> 위치가 확인되었습니다.</div>}
-            
+            {form.lat && <div style={{ fontSize: '0.8rem', color: '#16A34A', marginTop: '6px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4' }}> <ShieldCheck size={14} /> 위치가 확인되었습니다.</div>}
+
             {form.lat && form.lng && (
               <div style={{ marginTop: '16px' }}>
-                <div style={{ marginBottom: '8px', fontSize: '0.82rem', color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                  <MousePointer2 size={14} /> 핀을 드래그하거나 지도를 클릭해 위치를 조정할 수 있습니다.
+                <div style={{
+                  marginBottom: '10px', fontSize: '0.82rem', color: '#4F46E5',
+                  display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600,
+                  background: '#EEF2FF', padding: '10px 14px', borderRadius: '12px',
+                  border: '1px solid #C7D2FE'
+                }}>
+                  <MousePointer2 size={15} />
+                  <span>핀을 드래그하거나 지도를 클릭해 <strong>상세 위치</strong>를 교정하세요.</span>
                 </div>
-                <div 
-                  ref={mapContainerRef} 
-                  style={{ 
-                    width: '100%', 
-                    height: '240px', 
-                    borderRadius: '16px', 
+                <div
+                  ref={mapContainerRef}
+                  style={{
+                    width: '100%',
+                    height: '240px',
+                    borderRadius: '16px',
                     border: '1px solid #E2E8F0',
                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
-                  }} 
+                  }}
                 />
               </div>
             )}
@@ -439,7 +455,7 @@ export default function SuggestPage() {
               ? <><Loader size={22} style={{ animation: 'spin 1s linear infinite' }} /> 처리 중...</>
               : <><Send size={20} /> 정성껏 제안 제출하기</>}
           </button>
-          
+
           <p style={{ textAlign: 'center', fontSize: '0.8rem', color: '#94A3B8', marginTop: '10px' }}>
             제안해주신 내용은 멍스팟 팀의 검토 후 등록됩니다.
           </p>

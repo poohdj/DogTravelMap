@@ -217,7 +217,7 @@ export default function AdminPage() {
         alert('위치 정보를 가져올 수 없습니다. 브라우저의 위치 권한 설정을 확인해 주세요.');
         setIsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: false, timeout: 10000 }
     );
   };
 
@@ -227,7 +227,7 @@ export default function AdminPage() {
         oncomplete: (data: any) => {
           const fullAddress = data.roadAddress || data.jibunAddress;
           setForm(prev => ({ ...prev, address: fullAddress }));
-          
+
           const runKakaoSearch = () => {
             if (!window.kakao?.maps?.services) return;
             const geocoder = new window.kakao.maps.services.Geocoder();
@@ -281,7 +281,7 @@ export default function AdminPage() {
           return status === 'pending' || !s.status;
         })
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-      
+
       setSuggestions(data);
     } catch (err) {
       console.error('Error loading suggestions:', err);
@@ -300,12 +300,12 @@ export default function AdminPage() {
 
   // 장소 관리 탭 필터링 로직
   const filteredManagePlaces = managePlaces.filter(place => {
-    const matchesSearch = !manageSearch || 
+    const matchesSearch = !manageSearch ||
       place.name.toLowerCase().includes(manageSearch.toLowerCase()) ||
       place.address.toLowerCase().includes(manageSearch.toLowerCase());
-    
+
     const matchesCategory = manageCategory === '전체' || place.category === manageCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
 
@@ -563,35 +563,52 @@ export default function AdminPage() {
               <div style={{ marginBottom: '6px', fontSize: '0.8rem', color: '#9094A6', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <AlertCircle size={14} /> 주소가 정확한지 확인 후 상세 주소를 입력해 주세요.
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input style={{ ...styles.input, flex: 1 }} type="text" readOnly placeholder="아래 버튼을 눌러 주소 검색" value={form.address} />
-                <button type="button" onClick={openAddressSearch} style={styles.searchBtn}><MapPin size={16} /> 주소 검색</button>
-                <button 
-                  type="button" 
-                  onClick={useCurrentLocation} 
-                  style={{ ...styles.searchBtn, background: '#7C3AED' }}
-                  disabled={isLocating}
-                >
-                  {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
-                  {isLocating ? '확인 중...' : '현 위치'}
-                </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <input
+                  style={{ ...styles.input, flex: '1 1 200px', minWidth: '0' }}
+                  type="text"
+                  readOnly
+                  placeholder="아래 버튼을 눌러 주소 검색"
+                  value={form.address}
+                />
+                <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto' }}>
+                  <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1 }}>
+                    <MapPin size={16} /> 주소 검색
+                  </button>
+                  <button
+                    type="button"
+                    onClick={useCurrentLocation}
+                    style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2 }}
+                    disabled={isLocating}
+                  >
+                    {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
+                    <span style={{ marginLeft: '4px' }}>{isLocating ? '확인 중...' : '현 위치'}</span>
+                  </button>
+                </div>
               </div>
               {form.lat && <p style={{ fontSize: '0.78rem', color: '#16A34A', marginTop: '4px' }}>✓ 좌표 자동 입력됨 ({form.lat}, {form.lng})</p>}
-              
+
               {form.lat && form.lng && (
                 <div style={{ marginTop: '12px' }}>
-                  <div style={{ marginBottom: '6px', fontSize: '0.8rem', color: '#FF9F1C', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                    <MousePointer2 size={13} /> 핀을 드래그하거나 지도를 클릭해 위치를 조정할 수 있습니다.
+                  <div style={{
+                    marginBottom: '10px', fontSize: '0.8rem', color: '#C2410C',
+                    display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600,
+                    background: '#FFF7ED', padding: '10px 14px', borderRadius: '12px',
+                    border: '1px solid #FFEDD5'
+                  }}>
+                    <MousePointer2 size={15} />
+                    <span>핀을 드래그하거나 지도를 클릭해 <strong>상세 위치</strong>를 교정하세요.</span>
                   </div>
-                  <div 
-                    ref={mapContainerRef} 
-                    style={{ 
-                      width: '100%', 
-                      height: '200px', 
-                      borderRadius: '12px', 
+                  <div
+                    ref={mapContainerRef}
+                    style={{
+                      width: '100%',
+                      height: '240px',
+                      borderRadius: '16px',
                       border: '1px solid #E5E7EB',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.04), inset 0 2px 4px rgba(0,0,0,0.02)',
                       overflow: 'hidden'
-                    }} 
+                    }}
                   />
                 </div>
               )}
@@ -664,19 +681,19 @@ export default function AdminPage() {
         {/* Tab: 장소 관리 */}
         {tab === 'manage' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            
+
             {/* Search & Filter Bar */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#F8FAFC', padding: '16px', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <Search size={18} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
-                <input 
-                  style={{ ...styles.input, paddingLeft: '40px', background: '#fff' }} 
+                <input
+                  style={{ ...styles.input, paddingLeft: '40px', background: '#fff' }}
                   placeholder="장소명 또는 주소 검색..."
                   value={manageSearch}
                   onChange={e => setManageSearch(e.target.value)}
                 />
                 {manageSearch && (
-                  <button 
+                  <button
                     onClick={() => setManageSearch('')}
                     style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}
                   >
@@ -687,7 +704,7 @@ export default function AdminPage() {
 
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {['전체', ...Object.keys(CATEGORIES)].map(cat => (
-                  <button 
+                  <button
                     key={cat}
                     onClick={() => setManageCategory(cat)}
                     style={{
@@ -708,7 +725,7 @@ export default function AdminPage() {
               <div style={{ fontSize: '0.88rem', color: '#64748B' }}>
                 총 {managePlaces.length}개 중 <strong>{filteredManagePlaces.length}개</strong> 검색됨
                 {(manageSearch || manageCategory !== '전체') && (
-                  <button 
+                  <button
                     onClick={() => { setManageSearch(''); setManageCategory('전체'); }}
                     style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#FF9F1C', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
                   >
@@ -725,9 +742,9 @@ export default function AdminPage() {
               ? <div style={{ textAlign: 'center', padding: '40px', color: '#9094A6' }}><Loader size={24} style={{ animation: 'spin 1s linear infinite' }} /></div>
               : filteredManagePlaces.length === 0
                 ? <div style={{ textAlign: 'center', padding: '60px 40px', background: '#F8FAFC', borderRadius: '20px', color: '#94A3B8', fontSize: '0.95rem' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
-                    검색 결과가 없습니다.
-                  </div>
+                  <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🔍</div>
+                  검색 결과가 없습니다.
+                </div>
                 : filteredManagePlaces.map(place => (
                   <div key={place.id} style={{ border: '1px solid #E5E7EB', borderRadius: '12px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -801,7 +818,7 @@ export default function AdminPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ 
+                          <span style={{
                             fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '4px',
                             background: f.type === 'delete' ? '#FECACA' : f.type === 'correction' ? '#DBEAFE' : '#F3F4F6',
                             color: f.type === 'delete' ? '#DC2626' : f.type === 'correction' ? '#2563EB' : '#6B7280'
