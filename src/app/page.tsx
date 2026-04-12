@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader, CheckCircle, AlertCircle, Tag, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader, CheckCircle, AlertCircle, Tag, SlidersHorizontal, List, ChevronRight } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -149,7 +149,7 @@ export default function Home() {
 
   // 0. 필터링 로직 통합 (useMemo로 상시 개수 파악 가능하게 분리)
   const filteredPlaces = useMemo(() => {
-    return places.filter(place => {
+    return places.filter((place: Place) => {
       // 1. 카테고리 필터
       if (activeCategory !== '전체' && place.category !== activeCategory) return false;
       
@@ -250,7 +250,7 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    filteredPlaces.forEach((place) => {
+    filteredPlaces.forEach((place: Place) => {
       const position = new window.kakao.maps.LatLng(place.lat, place.lng);
       const marker = new window.kakao.maps.Marker({ position, clickable: true });
       marker.setMap(map);
@@ -263,7 +263,7 @@ export default function Home() {
 
     // 필터 변경 시 현재 선택된 장소가 필터링되어 사라졌다면 정보창 닫기
     if (selectedPlace) {
-      const isStillVisible = filteredPlaces.some(p => p.id === selectedPlace.id);
+      const isStillVisible = filteredPlaces.some((p: Place) => p.id === selectedPlace.id);
       if (!isStillVisible) setSelectedPlace(null);
     }
 
@@ -583,7 +583,7 @@ export default function Home() {
                 필터에 맞는 장소가 없습니다. 🐾
               </div>
             ) : (
-              filteredPlaces.map(place => (
+              filteredPlaces.map((place: Place) => (
                 <div key={place.id} className="list-item-card" onClick={() => { handleSearchSelect(place); setIsListViewOpen(false); }}>
                   <div className="list-item-info">
                     <div className="list-item-category">{place.subCategory || place.category}</div>
