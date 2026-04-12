@@ -23,6 +23,7 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false);
   const [status, setStatus] = useState<{type: 'error' | 'success' | 'info', msg: string} | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<{name?: string, address: string, lat: number, lng: number} | null>(
     initialValue?.lat ? { 
@@ -34,61 +35,64 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
   );
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const postcodeContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
 
-  // Initialize Kakao Map
+  const initMap = () => {
+    if (!mapContainerRef.current || !window.kakao?.maps || mapInstanceRef.current) return;
+    
+    const { maps } = window.kakao;
+    const initialPos = selectedPlace 
+      ? new maps.LatLng(selectedPlace.lat, selectedPlace.lng)
+      : new maps.LatLng(37.5665, 126.9780);
+
+    const options = { center: initialPos, level: 3 };
+    const map = new maps.Map(mapContainerRef.current, options);
+    mapInstanceRef.current = map;
+
+    const marker = new maps.Marker({ 
+      position: initialPos, 
+      draggable: true,
+      map: map 
+    });
+    markerRef.current = marker;
+
+    maps.event.addListener(marker, 'dragend', () => {
+      const latlng = marker.getPosition();
+      updateFromCoords(latlng.getLat(), latlng.getLng());
+    });
+
+    maps.event.addListener(map, 'click', (mouseEvent: any) => {
+      const latlng = mouseEvent.latLng;
+      marker.setPosition(latlng);
+      updateFromCoords(latlng.getLat(), latlng.getLng());
+    });
+  };
+
+  // 1. Load Kakao Script
   useEffect(() => {
-    const loadKakao = () => {
-      if (window.kakao?.maps?.services) {
-        initMap();
-      } else {
-        const script = document.createElement('script');
-        script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services&autoload=false`;
-        script.onload = () => window.kakao.maps.load(initMap);
-        document.head.appendChild(script);
-      }
-    };
-
-    const initMap = () => {
-      if (!mapContainerRef.current || !window.kakao?.maps) return;
-      
-      const { maps } = window.kakao;
-      const initialPos = selectedPlace 
-        ? new maps.LatLng(selectedPlace.lat, selectedPlace.lng)
-        : new maps.LatLng(37.5665, 126.9780); // Seoul center
-
-      const options = { center: initialPos, level: 3 };
-      const map = new maps.Map(mapContainerRef.current, options);
-      mapInstanceRef.current = map;
-
-      const marker = new maps.Marker({ 
-        position: initialPos, 
-        draggable: true,
-        map: map 
+    if (window.kakao?.maps?.services) {
+      if (selectedPlace) initMap();
+    } else {
+      const script = document.createElement('script');
+      script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_API_KEY}&libraries=services&autoload=false`;
+      script.onload = () => window.kakao.maps.load(() => {
+        if (selectedPlace) initMap();
       });
-      markerRef.current = marker;
-
-      // Marker drag end
-      maps.event.addListener(marker, 'dragend', () => {
-        const latlng = marker.getPosition();
-        updateFromCoords(latlng.getLat(), latlng.getLng());
-      });
-
-      // Map click
-      maps.event.addListener(map, 'click', (mouseEvent: any) => {
-        const latlng = mouseEvent.latLng;
-        marker.setPosition(latlng);
-        updateFromCoords(latlng.getLat(), latlng.getLng());
-      });
-    };
-
-    loadKakao();
+      document.head.appendChild(script);
+    }
   }, []);
 
-  // Update map when selected place changes
+  // 2. Sync Map with selectedPlace (and init if needed)
   useEffect(() => {
-    if (selectedPlace && mapInstanceRef.current && markerRef.current) {
+    if (!selectedPlace || !window.kakao?.maps) return;
+
+    if (!mapInstanceRef.current) {
+      // Small delay to ensure DOM is ready because of conditional rendering
+      const timer = setTimeout(initMap, 50);
+      return () => clearTimeout(timer);
+    } else {
       const { maps } = window.kakao;
       const pos = new maps.LatLng(selectedPlace.lat, selectedPlace.lng);
       mapInstanceRef.current.setCenter(pos);
@@ -144,7 +148,15 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
   };
 
   const openAddressSearch = () => {
+    setIsPostcodeOpen(true);
+    setResults([]); // Clear other results
+
     const runSearch = () => {
+      if (!postcodeContainerRef.current) return;
+      
+      // Clear container before embedding
+      postcodeContainerRef.current.innerHTML = '';
+
       new window.daum.Postcode({
         oncomplete: (data: any) => {
           const addr = data.roadAddress || data.jibunAddress;
@@ -156,10 +168,13 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
               const newData = { address: addr, lat, lng };
               setSelectedPlace(newData);
               onSelect(newData);
+              setIsPostcodeOpen(false);
             }
           });
         },
-      }).open();
+        width: '100%',
+        height: '400px',
+      }).embed(postcodeContainerRef.current);
     };
 
     if (!window.daum?.Postcode) {
@@ -167,7 +182,10 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
       s.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
       s.onload = runSearch;
       document.head.appendChild(s);
-    } else runSearch();
+    } else {
+      // Small timeout to ensure the container is rendered if it was just shown
+      setTimeout(runSearch, 0);
+    }
   };
 
   const useCurrentLocation = () => {
@@ -244,20 +262,44 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
         </div>
       )}
 
+      {/* Address Search Panel (Embedded) */}
+      {isPostcodeOpen && (
+        <div style={styles.postcodePanel}>
+          <div style={styles.postcodeHeader}>
+            <span style={{fontWeight: 700, fontSize: '0.9rem'}}>주소 검색</span>
+            <button type="button" onClick={() => setIsPostcodeOpen(false)} style={styles.closeBtn}>닫기</button>
+          </div>
+          <div ref={postcodeContainerRef} style={{ width: '100%', minHeight: '400px' }} />
+        </div>
+      )}
+
       {/* Selected Preview & Map */}
       <div style={styles.mapWrapper}>
-        <div style={styles.selectedBanner}>
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <MousePointer2 size={16} color="#FF9F1C" />
-            <span style={{fontWeight: 600, fontSize: '0.9rem'}}>
-              {selectedPlace?.name ? `📍 ${selectedPlace.name}` : selectedPlace?.address ? `📍 ${selectedPlace.address}` : '위치를 지정해 주세요'}
-            </span>
+        {selectedPlace ? (
+          <>
+            <div style={styles.selectedBanner}>
+              <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                <MousePointer2 size={16} color="#FF9F1C" />
+                <span style={{fontWeight: 600, fontSize: '0.9rem'}}>
+                  {selectedPlace?.name ? `📍 ${selectedPlace.name}` : `📍 ${selectedPlace.address}`}
+                </span>
+              </div>
+              <div style={{fontSize: '0.75rem', color: '#64748B', marginTop: '4px'}}>
+                지도를 탭하거나 핀을 움직여 상세 위치를 교정하세요.
+              </div>
+            </div>
+            <div ref={mapContainerRef} style={styles.map} />
+          </>
+        ) : !isPostcodeOpen ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>📍</div>
+            <div style={styles.emptyTitle}>장소의 위치를 지정해 주세요</div>
+            <div style={styles.emptyDesc}>
+              장소명 검색, 주소 검색 또는 '현위치' 버튼을 눌러<br />
+              지도에 정확한 위치를 표시할 수 있습니다.
+            </div>
           </div>
-          <div style={{fontSize: '0.75rem', color: '#64748B', marginTop: '4px'}}>
-            지도를 탭하거나 핀을 움직여 상세 위치를 교정하세요.
-          </div>
-        </div>
-        <div ref={mapContainerRef} style={styles.map} />
+        ) : null}
       </div>
 
       <style jsx global>{`
@@ -285,5 +327,12 @@ const styles: Record<string, React.CSSProperties> = {
   mapWrapper: { borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #F1F5F9' },
   selectedBanner: { background: '#FFFDF9', borderBottom: '1px solid #FFF1CC', padding: '12px 16px' },
   statusBanner: { padding: '12px 16px', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s ease-in-out' },
-  map: { width: '100%', height: '280px' },
+  map: { width: '100%', height: '320px', animation: 'fadeIn 0.4s ease-out' },
+  emptyState: { padding: '60px 20px', textAlign: 'center', background: '#F8FAFC', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' },
+  emptyIcon: { fontSize: '2.5rem', marginBottom: '8px', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.05))' },
+  emptyTitle: { fontWeight: 700, fontSize: '1rem', color: '#1E293B' },
+  emptyDesc: { fontSize: '0.85rem', color: '#94A3B8', lineHeight: 1.6 },
+  postcodePanel: { border: '1.5px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', background: '#fff', marginBottom: '12px' },
+  postcodeHeader: { padding: '12px 16px', borderBottom: '1px solid #F1F5F9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC' },
+  closeBtn: { padding: '4px 12px', background: '#fff', border: '1px solid #E2E8F0', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#64748B', cursor: 'pointer' },
 };
