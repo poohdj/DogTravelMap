@@ -10,19 +10,36 @@ declare global {
 }
 
 const CATEGORIES: Record<string, string[]> = {
-  '카페':  ['애견카페', '디저트카페', '브런치카페', '루프탑카페', '기타'],
-  '식당':  ['한식', '중식', '일식', '양식', '분식', '패스트푸드', '기타'],
-  '명소':  ['공원·산책로', '해변·강변', '계곡·산', '관광지', '쇼핑몰', '기타'],
-  '숙소':  ['펜션', '호텔', '캠핑장', '글램핑', '기타'],
-  '기타':  ['병원·약국', '미용실', '기타'],
+  '카페': ['애견 동반 카페', '애견 전용 카페(운동장/놀이터)'],
+  '식당': ['한식', '중식', '일식', '양식', '분식', '고기/구이류', '기타'],
+  '명소': ['공원·산책로', '해변·강변', '계곡·산', '관광지', '쇼핑몰', '기타'],
+  '숙소': ['펜션', '호텔', '캠핑장', '글램핑', '기타'],
+  '기타': ['동물병원', '약국', '애견미용실', '반려용품점', '기타'],
 };
 
-const REQUIREMENTS = ['견모차', '슬링백', '캐리어', '입마개', '리드줄 필수'];
+const FACILITIES = [
+  '야외/테라스',
+  '단독룸/프라이빗',
+  '대형견 입장 가능',
+  '오프리쉬(목줄해제) 가능',
+  '베이커리/간단한 식사',
+  '전용 주차장'
+];
+
+const REQUIREMENTS = [
+  '리드줄 필수',
+  '실내 바닥 보행 금지(안고 있어야 함)',
+  '슬링백 지참',         // 머리가 노출될 수 있는 형태
+  '캐리어(하드/소프트) 필수', // 뚜껑이 닫히는 형태
+  '견모차(개모차) 필수',
+  '입마개 필수(맹견/예민견)'
+];
 
 const defaultForm = {
-  name: '', category: '카페', subCategory: '애견카페',
+  name: '', category: '카페', subCategory: '애견 동반 카페',
   address: '', addressDetail: '', lat: '', lng: '',
   isDogFriendly: true, requirements: [] as string[],
+  facilities: [] as string[],
   notes: '', submittedBy: '',
 };
 
@@ -84,6 +101,7 @@ export default function SuggestPage() {
         address: form.address, addressDetail: form.addressDetail,
         lat: parseFloat(form.lat), lng: parseFloat(form.lng),
         isDogFriendly: form.isDogFriendly, requirements: form.requirements,
+        facilities: form.facilities,
         notes: form.notes, submittedBy: form.submittedBy || '익명',
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -171,11 +189,24 @@ export default function SuggestPage() {
             </div>
           </Field>
 
-          <Field label="필요 항목 (복수 선택 가능)">
+          <Field label="동반 규정 (복수 선택 가능)">
             <div style={styles.pillGroup}>
               {REQUIREMENTS.map(req => (
                 <button key={req} type="button" onClick={() => toggleRequirement(req)}
-                  style={form.requirements.includes(req) ? { ...styles.pillActive, background: '#7C3AED', borderColor: '#7C3AED' } : styles.pill}>🐾 {req}</button>
+                  style={form.requirements.includes(req) ? { ...styles.pillActive, background: '#7C3AED', borderColor: '#7C3AED' } : styles.pill}>🔖 {req}</button>
+              ))}
+            </div>
+          </Field>
+
+          <Field label="장소 특징 (복수 선택 가능)">
+            <div style={styles.pillGroup}>
+              {FACILITIES.map(fac => (
+                <button key={fac} type="button"
+                  onClick={() => setForm(p => ({
+                    ...p,
+                    facilities: p.facilities.includes(fac) ? p.facilities.filter(f => f !== fac) : [...p.facilities, fac]
+                  }))}
+                  style={form.facilities.includes(fac) ? { ...styles.pillActive, background: '#059669', borderColor: '#059669' } : styles.pill}>✨ {fac}</button>
               ))}
             </div>
           </Field>

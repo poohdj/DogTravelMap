@@ -23,6 +23,7 @@ interface Place {
   addressDetail?: string; // 상세 주소
   isDogFriendly: boolean; // 애견동반 가능 여부
   requirements: string[]; // 필요 항목: ["견모차", "슬링백"] 등
+  facilities?: string[];  // 장소 특징: ["야외/테라스", "전용 주차장"] 등
   notes?: string;         // 기타 메모
 }
 
@@ -455,8 +456,13 @@ export default function Home() {
               </span>
             }
             {selectedPlace.requirements?.map(req => (
-              <span key={req} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7C3AED', background: '#F5F3FF', padding: '4px 10px', borderRadius: '999px' }}>
-                🐾 {req} 필요
+              <span key={req} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#7C3AED', background: '#F5F3FF', padding: '4px 10px', borderRadius: '999px', border: '1px solid #E0E7FF' }}>
+                🔖 {req}
+              </span>
+            ))}
+            {selectedPlace.facilities?.map(fac => (
+              <span key={fac} style={{ fontSize: '0.78rem', fontWeight: 600, color: '#059669', background: '#ECFDF5', padding: '4px 10px', borderRadius: '999px', border: '1px solid #D1FAE5' }}>
+                ✨ {fac}
               </span>
             ))}
           </div>
