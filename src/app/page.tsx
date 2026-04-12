@@ -64,6 +64,24 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   '기타': <Menu size={15} />,
 };
 
+const FACILITIES = [
+  '야외/테라스',
+  '단독룸/프라이빗',
+  '대형견 입장 가능',
+  '오프리쉬(목줄해제) 가능',
+  '베이커리/간단한 식사',
+  '전용 주차장'
+];
+
+const REQUIREMENTS = [
+  '리드줄 필수',
+  '실내 바닥 보행 금지(안고 있어야 함)',
+  '슬링백 지참',
+  '캐리어(하드/소프트) 필수',
+  '견모차(개모차) 필수',
+  '입마개 필수(맹견/예민견)'
+];
+
 export default function Home() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<any>(null);
@@ -75,6 +93,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [requirementsFilter, setRequirementsFilter] = useState<string[]>([]);
+  const [facilitiesFilter, setFacilitiesFilter] = useState<string[]>([]);
   const [dogFriendlyOnly, setDogFriendlyOnly] = useState(false);
   const myLocationMarkerRef = useRef<any>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -167,14 +186,34 @@ export default function Home() {
     }
   }, []);
 
-  // 3. Render Markers - 카테고리 필터 반영
+  // 3. Render Markers - 모든 필터 반영 (AND 조건)
   useEffect(() => {
     if (!map || places.length === 0) return;
 
     const markers: any[] = [];
-    const filtered = activeCategory === '전체'
-      ? places
-      : places.filter(p => p.category === activeCategory);
+    
+    // 복합 필터링 로직
+    const filtered = places.filter(place => {
+      // 1. 카테고리 필터
+      if (activeCategory !== '전체' && place.category !== activeCategory) return false;
+      
+      // 2. 애견동반 가능 상태 필터
+      if (dogFriendlyOnly && !place.isDogFriendly) return false;
+      
+      // 3. 동반 규정 필터 (선택한 모든 항목을 만족해야 함 - AND)
+      if (requirementsFilter.length > 0) {
+        const hasAllReqs = requirementsFilter.every(req => place.requirements?.includes(req));
+        if (!hasAllReqs) return false;
+      }
+      
+      // 4. 장소 특징 필터 (선택한 모든 항목을 만족해야 함 - AND)
+      if (facilitiesFilter.length > 0) {
+        const hasAllFacs = facilitiesFilter.every(fac => place.facilities?.includes(fac));
+        if (!hasAllFacs) return false;
+      }
+      
+      return true;
+    });
 
     filtered.forEach((place) => {
       const position = new window.kakao.maps.LatLng(place.lat, place.lng);
@@ -187,13 +226,14 @@ export default function Home() {
       });
     });
 
-    // 필터 변경 시 선택된 장소가 필터에서 사라지면 닫기
-    if (selectedPlace && activeCategory !== '전체' && selectedPlace.category !== activeCategory) {
-      setSelectedPlace(null);
+    // 필터 변경 시 현재 선택된 장소가 필터링되어 사라졌다면 정보창 닫기
+    if (selectedPlace) {
+      const isStillVisible = filtered.some(p => p.id === selectedPlace.id);
+      if (!isStillVisible) setSelectedPlace(null);
     }
 
     return () => { markers.forEach(m => m.setMap(null)); };
-  }, [map, places, activeCategory]);
+  }, [map, places, activeCategory, dogFriendlyOnly, requirementsFilter, facilitiesFilter]);
 
   // 4. Move to my current GPS location
   const goToMyLocation = useCallback(() => {
@@ -356,15 +396,30 @@ export default function Home() {
 
         {/* 상세 필터 */}
         <div className="drawer-section">
-          <div className="drawer-section-title">상세 필터</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div className="drawer-section-title" style={{ marginBottom: 0 }}>상세 필터</div>
+            <button 
+              onClick={() => {
+                setDogFriendlyOnly(false);
+                setRequirementsFilter([]);
+                setFacilitiesFilter([]);
+                setActiveCategory('전체');
+              }}
+              style={{ background: 'none', border: 'none', color: 'var(--primary-color)', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              초기화
+            </button>
+          </div>
+          
           <label className="drawer-toggle">
             <span>애견동반 가능만 보기</span>
             <div className={`toggle-switch ${dogFriendlyOnly ? 'on' : ''}`} onClick={() => setDogFriendlyOnly(p => !p)} />
           </label>
-          <div style={{ marginTop: '12px' }}>
-            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>필요 항목 필터</div>
+          
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>🔖 동반 규정 필터 (AND)</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {['견모차', '슬링백', '캐리어', '입마개', '리드줄 필수'].map(req => (
+              {REQUIREMENTS.map(req => (
                 <button key={req}
                   onClick={() => setRequirementsFilter(prev =>
                     prev.includes(req) ? prev.filter(r => r !== req) : [...prev, req]
@@ -373,9 +428,36 @@ export default function Home() {
                     padding: '6px 12px', borderRadius: '999px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
                     background: requirementsFilter.includes(req) ? '#7C3AED' : '#F4F5F7',
                     color: requirementsFilter.includes(req) ? '#fff' : 'var(--text-secondary)',
-                    border: 'none', fontFamily: 'inherit',
+                    border: '1.5px solid',
+                    borderColor: requirementsFilter.includes(req) ? '#7C3AED' : '#E5E7EB',
+                    fontFamily: 'inherit',
                   }}
-                >🐾 {req}</button>
+                >
+                  {req}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginTop: '20px' }}>
+            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>✨ 장소 특징 필터 (AND)</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {FACILITIES.map(fac => (
+                <button key={fac}
+                  onClick={() => setFacilitiesFilter(prev =>
+                    prev.includes(fac) ? prev.filter(f => f !== fac) : [...prev, fac]
+                  )}
+                  style={{
+                    padding: '6px 12px', borderRadius: '999px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+                    background: facilitiesFilter.includes(fac) ? '#059669' : '#F4F5F7',
+                    color: facilitiesFilter.includes(fac) ? '#fff' : 'var(--text-secondary)',
+                    border: '1.5px solid',
+                    borderColor: facilitiesFilter.includes(fac) ? '#059669' : '#E5E7EB',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {fac}
+                </button>
               ))}
             </div>
           </div>
