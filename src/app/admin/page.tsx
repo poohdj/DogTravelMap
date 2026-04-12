@@ -27,20 +27,20 @@ const REQUIREMENTS = ['견모차', '슬링백', '캐리어', '입마개', '리�
 
 const defaultForm = {
   name: '', category: '카페', subCategory: '디저트카페',
-  address: '', lat: '', lng: '',
+  address: '', addressDetail: '', lat: '', lng: '',
   isDogFriendly: true, requirements: [] as string[], notes: '',
 };
 
 type Place = {
   id: string; name: string; category: string; subCategory: string;
-  address: string; lat: number; lng: number;
+  address: string; addressDetail?: string; lat: number; lng: number;
   isDogFriendly: boolean; requirements: string[]; notes: string;
   createdAt?: string;
 };
 
 type Suggestion = {
   id: string; name: string; category: string; subCategory: string;
-  address: string; lat: number; lng: number;
+  address: string; addressDetail?: string; lat: number; lng: number;
   isDogFriendly: boolean; requirements: string[]; notes: string;
   submittedBy?: string; status: string; createdAt: string;
 };
@@ -109,6 +109,7 @@ export default function AdminPage() {
       category: place.category,
       subCategory: place.subCategory,
       address: place.address,
+      addressDetail: place.addressDetail ?? '',
       lat: String(place.lat),
       lng: String(place.lng),
       isDogFriendly: place.isDogFriendly,
@@ -143,7 +144,8 @@ export default function AdminPage() {
     try {
       await addDoc(collection(db, 'places'), {
         name: s.name, category: s.category, subCategory: s.subCategory,
-        address: s.address, lat: s.lat, lng: s.lng,
+        address: s.address, addressDetail: s.addressDetail ?? '',
+        lat: s.lat, lng: s.lng,
         isDogFriendly: s.isDogFriendly, requirements: s.requirements, notes: s.notes,
         createdAt: new Date().toISOString(),
       });
@@ -208,7 +210,8 @@ export default function AdminPage() {
     try {
       const data = {
         name: form.name, category: form.category, subCategory: form.subCategory,
-        address: form.address, lat: parseFloat(form.lat), lng: parseFloat(form.lng),
+        address: form.address, addressDetail: form.addressDetail,
+        lat: parseFloat(form.lat), lng: parseFloat(form.lng),
         isDogFriendly: form.isDogFriendly, requirements: form.requirements, notes: form.notes,
       };
       if (editId) {
@@ -340,6 +343,8 @@ export default function AdminPage() {
                 <button type="button" onClick={openAddressSearch} style={styles.searchBtn}><MapPin size={16} /> 주소 검색</button>
               </div>
               {form.lat && <p style={{ fontSize: '0.78rem', color: '#16A34A', marginTop: '4px' }}>✓ 좌표 자동 입력됨</p>}
+              <input style={{ ...styles.input, marginTop: '8px' }} type="text" placeholder="상세 주소 입력 (예: 102호, 2층)"
+                value={form.addressDetail} onChange={e => setForm(p => ({ ...p, addressDetail: e.target.value }))} />
             </Field>
             <Field label="애견동반 가능 *">
               <div style={styles.pillGroup}>
@@ -391,7 +396,9 @@ export default function AdminPage() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{place.name}</div>
                       <div style={{ fontSize: '0.8rem', color: '#9094A6', marginTop: '2px' }}>{place.category} · {place.subCategory}</div>
-                      <div style={{ fontSize: '0.78rem', color: '#9094A6', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>📍 {place.address}</div>
+                      <div style={{ fontSize: '0.78rem', color: '#9094A6', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        📍 {place.address} {place.addressDetail && `(${place.addressDetail})`}
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                       <button onClick={() => handleEdit(place)}
@@ -432,7 +439,7 @@ export default function AdminPage() {
                         </button>
                       </div>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#555' }}>📍 {s.address}</div>
+                    <div style={{ fontSize: '0.85rem', color: '#555' }}>📍 {s.address} {s.addressDetail && `(${s.addressDetail})`}</div>
                     {s.notes && <div style={{ fontSize: '0.82rem', color: '#9094A6', background: '#F9F9F9', borderRadius: '6px', padding: '8px' }}>{s.notes}</div>}
                     {s.submittedBy && <div style={{ fontSize: '0.78rem', color: '#9094A6' }}>제안자: {s.submittedBy}</div>}
                   </div>

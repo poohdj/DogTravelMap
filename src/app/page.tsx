@@ -20,6 +20,7 @@ interface Place {
   lat: number;
   lng: number;
   address: string;
+  addressDetail?: string; // 상세 주소
   isDogFriendly: boolean; // 애견동반 가능 여부
   requirements: string[]; // 필요 항목: ["견모차", "슬링백"] 등
   notes?: string;         // 기타 메모
@@ -228,7 +229,7 @@ export default function Home() {
   const sharePlace = useCallback(async (place: Place) => {
     const shareData = {
       title: `멍스팟 - ${place.name}`,
-      text: `🐾 ${place.name}\n${place.address}\n애견동반: ${place.isDogFriendly ? '가능' : '확인필요'}`,
+      text: `🐾 ${place.name}\n${place.address}${place.addressDetail ? ` (${place.addressDetail})` : ''}\n애견동반: ${place.isDogFriendly ? '가능' : '확인필요'}`,
       url: `https://map.kakao.com/link/map/${encodeURIComponent(place.name)},${place.lat},${place.lng}`,
     };
     if (navigator.share) {
@@ -301,7 +302,7 @@ export default function Home() {
                       <div>
                         <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--text-main)' }}>{place.name}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          {place.category} · {place.subCategory} · {place.address}
+                          {place.category} · {place.subCategory} · {place.address} {place.addressDetail && `(${place.addressDetail})`}
                         </div>
                       </div>
                     </div>
@@ -440,7 +441,7 @@ export default function Home() {
 
           <div className="place-meta">
             <MapPin size={16} />
-            <span>{selectedPlace.address || '주소 정보 없음'}</span>
+            <span>{selectedPlace.address}{selectedPlace.addressDetail ? ` (${selectedPlace.addressDetail})` : ''}</span>
           </div>
 
           {/* 애견동반 여부 + 필요항목 */}
