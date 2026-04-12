@@ -49,8 +49,8 @@ export const metadata: Metadata = {
     'naver-site-verification': 'cf6694632f05ff2cb8e391744f63666c7225ea61',
   },
   icons: {
-    icon: '/icon.png',
-    apple: '/icon.png',
+    icon: '/icon.svg',
+    apple: '/icon.svg',
   },
 };
 
