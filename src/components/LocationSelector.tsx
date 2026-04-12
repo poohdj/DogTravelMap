@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, MapPin, Navigation, MousePointer2, Loader, Link as LinkIcon, AlertCircle, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Navigation, MousePointer2, Loader, AlertCircle, ChevronRight } from 'lucide-react';
 
 interface LocationSelectorProps {
   onSelect: (data: {
@@ -20,11 +20,9 @@ interface LocationSelectorProps {
 
 export default function LocationSelector({ onSelect, initialValue }: LocationSelectorProps) {
   const [keyword, setKeyword] = useState('');
-  const [link, setLink] = useState('');
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState<{name?: string, address: string, lat: number, lng: number} | null>(
     initialValue?.lat ? { 
       name: initialValue.name, 
@@ -182,32 +180,6 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
     );
   };
 
-  const handleLinkExtract = async () => {
-    if (!link.trim()) return;
-    setIsExtracting(true);
-    try {
-      const res = await fetch(`/api/extract-metadata?url=${encodeURIComponent(link)}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      // Try to search for this place by name to get coordinates
-      if (data.title) {
-        setKeyword(data.title);
-        const ps = new window.kakao.maps.services.Places();
-        ps.keywordSearch(data.title, (results: any, status: any) => {
-          if (status === window.kakao.maps.services.Status.OK) {
-            setResults(results);
-          } else {
-            alert(`'${data.title}' 장소를 찾았습니다. 리스트에서 선택해 주세요.`);
-          }
-        });
-      }
-    } catch (err: any) {
-      alert('링크 정보를 읽어오는데 실패했습니다. 상호명을 직접 검색해 주세요.');
-    } finally {
-      setIsExtracting(false);
-    }
-  };
 
   return (
     <div style={styles.container}>
@@ -236,23 +208,6 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
         </div>
       </div>
 
-      {/* Link Auto-fill Section */}
-      <div style={styles.linkSection}>
-        <div style={styles.linkHeader}>
-          <LinkIcon size={14} /> Naver/Kakao 지도 링크로 자동 입력
-        </div>
-        <div style={styles.searchBar}>
-          <input 
-            style={{...styles.input, fontSize: '0.85rem'}} 
-            placeholder="공유받은 지도 링크를 붙여넣으세요" 
-            value={link}
-            onChange={e => setLink(e.target.value)}
-          />
-          <button type="button" onClick={handleLinkExtract} style={{...styles.actionBtn, background: '#4B5563'}} disabled={isExtracting}>
-            {isExtracting ? <Loader size={14} className="spin" /> : '불러오기'}
-          </button>
-        </div>
-      </div>
 
       {/* Search Results */}
       {results.length > 0 && (
@@ -303,8 +258,6 @@ const styles: Record<string, React.CSSProperties> = {
   actionBtn: { border: 'none', background: '#2D3142', color: '#fff', padding: '0 20px', height: '48px', fontWeight: 700, cursor: 'pointer' },
   secondaryActions: { display: 'flex', gap: '8px' },
   utilBtn: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', background: '#fff', border: '1.5px solid #E2E8F0', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 600, color: '#64748B', cursor: 'pointer' },
-  linkSection: { background: '#F1F5F9', padding: '12px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' },
-  linkHeader: { fontSize: '0.78rem', fontWeight: 700, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' },
   resultsPanel: { background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' },
   resultItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', transition: 'background 0.2s' },
   resultName: { fontWeight: 700, fontSize: '0.9rem', color: '#1E293B' },
