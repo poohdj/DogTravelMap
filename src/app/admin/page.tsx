@@ -107,6 +107,16 @@ export default function AdminPage() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
 
+  // 전역 상태 알림
+  const [status, setStatus] = useState<{type: 'error' | 'success' | 'info', msg: string} | null>(null);
+  const [feedbackTarget, setFeedbackTarget] = useState<Feedback | null>(null); // 피드백 삭제 확인용
+
+  const showStatus = (msg: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setStatus({ type, msg });
+    if (type === 'success' || type === 'info') {
+      setTimeout(() => setStatus(null), 4000);
+    }
+  };
 
 
   // Auth state
@@ -205,21 +215,27 @@ export default function AdminPage() {
       handleEdit(p);
     } else {
       // 리스트에 없으면 (아직 로드 전이면) 직접 로드 시도
-      alert('장소 데이터를 찾는 중입니다...');
+      showStatus('장소 데이터를 찾는 중입니다...', 'info');
       loadManagePlaces().then(() => {
         const p2 = managePlaces.find(x => x.id === placeId);
         if (p2) handleEdit(p2);
-        else alert('해당 장소를 찾을 수 없거나 이미 삭제되었습니다.');
+        else showStatus('해당 장소를 찾을 수 없거나 이미 삭제되었습니다.');
       });
     }
   };
 
-  const handleDeleteFeedback = async (id: string) => {
-    if (!confirm('이 피드백을 삭제(처리 완료)하시겠습니까?')) return;
+  const handleDeleteFeedback = (f: Feedback) => {
+    setFeedbackTarget(f);
+  };
+
+  const confirmDeleteFeedback = async () => {
+    if (!feedbackTarget) return;
     try {
-      await deleteDoc(doc(db, 'feedbacks', id));
-      setFeedbacks(prev => prev.filter(f => f.id !== id));
-    } catch { alert('피드백 삭제 중 오류가 발생했습니다.'); }
+      await deleteDoc(doc(db, 'feedbacks', feedbackTarget.id));
+      setFeedbacks(prev => prev.filter(f => f.id !== feedbackTarget.id));
+      setFeedbackTarget(null);
+      showStatus('피드백이 삭제되었습니다.', 'success');
+    } catch { showStatus('피드백 삭제 중 오류가 발생했습니다.'); }
   };
 
   // 삭제 확인
@@ -233,8 +249,9 @@ export default function AdminPage() {
       await deleteDoc(doc(db, 'places', deleteTarget.id));
       setManagePlaces(prev => prev.filter(p => p.id !== deleteTarget.id));
       setDeleteTarget(null);
+      showStatus('장소가 삭제되었습니다.', 'success');
     } catch {
-      alert('삭제 중 오류가 발생했습니다.');
+      showStatus('장소 삭제 중 오류가 발생했습니다.');
     }
   };
 
@@ -251,14 +268,16 @@ export default function AdminPage() {
       });
       await deleteDoc(doc(db, 'suggestions', s.id));
       setSuggestions(prev => prev.filter(x => x.id !== s.id));
-    } catch { alert('승인 중 오류가 발생했습니다.'); }
+      showStatus('제안이 승인되어 장소로 등록되었습니다.', 'success');
+    } catch { showStatus('승인 중 오류가 발생했습니다.'); }
   };
 
   const handleReject = async (id: string) => {
     try {
       await updateDoc(doc(db, 'suggestions', id), { status: 'rejected' });
       setSuggestions(prev => prev.filter(x => x.id !== id));
-    } catch { alert('거절 처리 중 오류가 발생했습니다.'); }
+      showStatus('제안이 거절 처리되었습니다.', 'info');
+    } catch { showStatus('거절 처리 중 오류가 발생했습니다.'); }
   };
 
 
@@ -345,6 +364,24 @@ export default function AdminPage() {
   }
 
   return (<>
+    {/* Status Message Banner */}
+    {status && (
+      <div style={{
+        position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 2000, padding: '16px 24px', borderRadius: '16px',
+        background: status.type === 'error' ? '#FEF2F2' : status.type === 'success' ? '#F0FDF4' : '#EFF6FF',
+        color: status.type === 'error' ? '#DC2626' : status.type === 'success' ? '#16A34A' : '#2563EB',
+        border: `1.5px solid ${status.type === 'error' ? '#FECACA' : status.type === 'success' ? '#BBF7D0' : '#BFDBFE'}`,
+        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+        display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600,
+        animation: 'slideDown 0.3s ease-out'
+      }} onClick={() => setStatus(null)}>
+        <AlertCircle size={20} />
+        {status.msg}
+        <X size={16} style={{ marginLeft: '8px', opacity: 0.6, cursor: 'pointer' }} />
+      </div>
+    )}
+
     <div style={styles.page} className="admin-page-body">
       <div style={styles.card}>
         {/* Header */}
@@ -660,8 +697,11 @@ export default function AdminPage() {
                         <button onClick={() => handleEditFromFeedback(f.placeId)} style={{ background: '#EEF2FF', color: '#4F46E5', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'inherit' }}>
                           장소 수정
                         </button>
-                        <button onClick={() => handleDeleteFeedback(f.id)} style={{ background: '#F4F5F7', color: '#6B7280', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit' }}>
-                          삭제
+                        <button 
+                          onClick={() => handleDeleteFeedback(f)} 
+                          style={{ background: '#FEE2E2', color: '#EF4444', border: '1px solid #FECACA', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'inherit' }}
+                        >
+                          <Trash2 size={12} /> 삭제
                         </button>
                       </div>
                     </div>
@@ -673,23 +713,32 @@ export default function AdminPage() {
       </div>
     </div>
 
-    {/* 삭제 확인 모달 */}
-    {deleteTarget && (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-        <div style={{ background: '#fff', borderRadius: '20px', padding: '32px 28px', maxWidth: '360px', width: '100%', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-          <div style={{ fontSize: '2rem', textAlign: 'center' }}>🗑️</div>
-          <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.1rem', color: '#2D3142', textAlign: 'center' }}>장소를 삭제할까요?</h3>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#9094A6', textAlign: 'center', lineHeight: 1.6 }}>
-            <strong style={{ color: '#2D3142' }}>{deleteTarget.name}</strong><br />
-            삭제 후에는 되돌릴 수 없습니다.
-          </p>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => setDeleteTarget(null)}
-              style={{ flex: 1, padding: '12px', background: '#F4F5F7', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit', color: '#6B7280' }}>
+    {/* Custom Confirmation Modals */}
+    {(deleteTarget || feedbackTarget) && (
+      <div style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)',
+        zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+      }}>
+        <div style={{ background: '#fff', borderRadius: '24px', padding: '32px', maxWidth: '400px', width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: '#FEF2F2', borderRadius: '16px', padding: '16px', color: '#DC2626', width: 'fit-content' }}>
+            <Trash2 size={32} />
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontWeight: 700, fontSize: '1.25rem', color: '#111827' }}>정말로 삭제하시겠습니까?</h3>
+            <p style={{ margin: '8px 0 0 0', fontSize: '0.95rem', color: '#6B7280', lineHeight: 1.6 }}>
+              {deleteTarget 
+                ? <><strong style={{ color: '#111827' }}>{deleteTarget.name}</strong> 장소 데이터를 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</>
+                : <>선택한 피드백을 목록에서 삭제(처리 완료)합니다.</>
+              }
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+            <button onClick={() => { setDeleteTarget(null); setFeedbackTarget(null); }}
+              style={{ flex: 1, padding: '14px', background: '#F3F4F6', border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', color: '#4B5563' }}>
               취소
             </button>
-            <button onClick={confirmDelete}
-              style={{ flex: 1, padding: '12px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={deleteTarget ? confirmDelete : confirmDeleteFeedback}
+              style={{ flex: 1, padding: '14px', background: '#DC2626', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               삭제하기
             </button>
           </div>

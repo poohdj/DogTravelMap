@@ -23,6 +23,7 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [status, setStatus] = useState<{type: 'error' | 'success' | 'info', msg: string} | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<{name?: string, address: string, lat: number, lng: number} | null>(
     initialValue?.lat ? { 
       name: initialValue.name, 
@@ -95,6 +96,11 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
     }
   }, [selectedPlace]);
 
+  const showStatus = (msg: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setStatus({ type, msg });
+    setTimeout(() => setStatus(null), 4000);
+  };
+
   const updateFromCoords = (lat: number, lng: number) => {
     if (!window.kakao?.maps?.services) return;
     const geocoder = new window.kakao.maps.services.Geocoder();
@@ -119,10 +125,10 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
       if (status === window.kakao.maps.services.Status.OK) {
         setResults(data);
       } else if (status === window.kakao.maps.services.Status.ZERO_RESULT) {
-        alert('검색 결과가 없습니다.');
+        showStatus('검색 결과가 없습니다.');
         setResults([]);
       } else {
-        alert('검색 중 오류가 발생했습니다.');
+        showStatus('검색 중 오류가 발생했습니다.');
       }
     });
   };
@@ -165,7 +171,7 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
   };
 
   const useCurrentLocation = () => {
-    if (!navigator.geolocation) return alert('위치 정보를 지원하지 않습니다.');
+    if (!navigator.geolocation) return showStatus('이 브라우저는 위치 정보를 지원하지 않습니다.');
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -173,7 +179,7 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
         setIsLocating(false);
       },
       () => {
-        alert('위치 정보를 가져오는데 실패했습니다.');
+        showStatus('위치 정보를 가져오는데 실패했습니다.');
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 5000 }
@@ -183,6 +189,19 @@ export default function LocationSelector({ onSelect, initialValue }: LocationSel
 
   return (
     <div style={styles.container}>
+      {/* Status Banner */}
+      {status && (
+        <div style={{
+          ...styles.statusBanner,
+          background: status.type === 'error' ? '#FEF2F2' : status.type === 'success' ? '#F0FDF4' : '#F1F5F9',
+          color: status.type === 'error' ? '#DC2626' : status.type === 'success' ? '#16A34A' : '#475569',
+          border: `1.5px solid ${status.type === 'error' ? '#FECACA' : status.type === 'success' ? '#BBF7D0' : '#E2E8F0'}`,
+        }}>
+          <AlertCircle size={16} />
+          {status.msg}
+        </div>
+      )}
+
       {/* Search Toggle / Tabs (Simplified) */}
       <div style={styles.inputGroup}>
         <div style={styles.searchBar}>
@@ -265,5 +284,6 @@ const styles: Record<string, React.CSSProperties> = {
   closeResults: { width: '100%', padding: '8px', background: '#F8FAFC', border: 'none', fontSize: '0.8rem', color: '#94A3B8', cursor: 'pointer' },
   mapWrapper: { borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #F1F5F9' },
   selectedBanner: { background: '#FFFDF9', borderBottom: '1px solid #FFF1CC', padding: '12px 16px' },
+  statusBanner: { padding: '12px 16px', borderRadius: '12px', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', animation: 'fadeIn 0.3s ease-in-out' },
   map: { width: '100%', height: '280px' },
 };

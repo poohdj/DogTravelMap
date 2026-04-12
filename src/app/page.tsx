@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader, CheckCircle, AlertCircle, Tag, SlidersHorizontal, List, ChevronRight } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { X, MapPin, Navigation, Share2, Search, Menu, Coffee, TreePine, Map as MapIcon, Utensils, Loader, CheckCircle, AlertCircle, Tag, SlidersHorizontal, List, ChevronRight, Send, ArrowLeft } from 'lucide-react';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Add type for Kakao Map so typescript doesn't complain
@@ -95,6 +95,20 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // 피드백 관련 상태
+  const [isFeedbackMode, setIsFeedbackMode] = useState(false);
+  const [feedbackType, setFeedbackType] = useState('correction');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  
+  // 전역 상태 알림
+  const [status, setStatus] = useState<{type: 'error' | 'success' | 'info', msg: string} | null>(null);
+
+  const showStatus = useCallback((msg: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setStatus({ type, msg });
+    setTimeout(() => setStatus(null), 4000);
+  }, []);
 
   // iPhone Safari Address Bar Color Management
   useEffect(() => {
@@ -331,7 +345,7 @@ export default function Home() {
   const goToMyLocation = useCallback(() => {
     if (!map || isLocating) return;
     if (!navigator.geolocation) {
-      alert('이 브라우저는 내 위치 기능을 지원하지 않습니다.');
+      showStatus('이 브라우저는 내 위치 기능을 지원하지 않습니다.');
       return;
     }
     setIsLocating(true);
@@ -370,11 +384,28 @@ export default function Home() {
       await navigator.share(shareData);
     } else {
       await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-      alert('장소 정보가 클립보드에 복사되었습니다!');
+      showStatus('장소 정보가 클립보드에 복사되었습니다!', 'success');
     }
   }, []);
 
-  return (
+  return (<>
+    {/* Status Message Banner */}
+    {status && (
+      <div style={{
+        position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 3000, padding: '14px 20px', borderRadius: '12px',
+        background: status.type === 'error' ? '#FEF2F2' : status.type === 'success' ? '#F0FDF4' : '#EFF6FF',
+        color: status.type === 'error' ? '#DC2626' : status.type === 'success' ? '#16A34A' : '#2563EB',
+        border: `1.5px solid ${status.type === 'error' ? '#FECACA' : status.type === 'success' ? '#BBF7D0' : '#BFDBFE'}`,
+        boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+        display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600, fontSize: '0.9rem',
+        animation: 'slideDown 0.3s ease-out'
+      }} onClick={() => setStatus(null)}>
+        <AlertCircle size={18} />
+        {status.msg}
+      </div>
+    )}
+
     <main className="map-container">
       {/* Map Rendering Container */}
       <div id="kakao-map" ref={mapRef} tabIndex={0}></div>
@@ -702,93 +733,184 @@ export default function Home() {
             </div>
             <button
               className="close-btn"
-              onClick={() => setSelectedPlace(null)}
+              onClick={() => {
+                setSelectedPlace(null);
+                setIsFeedbackMode(false);
+                setFeedbackMessage('');
+              }}
               aria-label="닫기"
             >
               <X size={20} />
             </button>
           </div>
 
-          <div className="place-meta">
-            <MapPin size={16} />
-            <span>{selectedPlace.address}{selectedPlace.addressDetail ? ` (${selectedPlace.addressDetail})` : ''}</span>
-          </div>
+          {isFeedbackMode ? (
+            <div className="feedback-form" style={{ marginTop: '16px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px', color: 'var(--text-main)' }}>어떤 정보가 잘못되었나요?</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'correction', label: '정보 수정' },
+                    { id: 'delete', label: '폐업/삭제' },
+                    { id: 'other', label: '기타' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setFeedbackType(t.id)}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '10px',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        border: '1.5px solid',
+                        borderColor: feedbackType === t.id ? 'var(--primary-color)' : '#E2E8F0',
+                        background: feedbackType === t.id ? '#FFF4E6' : '#fff',
+                        color: feedbackType === t.id ? 'var(--primary-color)' : '#64748B',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* 인증 상태 + 필요항목 */}
-          <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {selectedPlace.isDogFriendly
-              ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: '#16A34A', background: '#F0FDF4', padding: '4px 12px', borderRadius: '999px', border: '1px solid #BBF7D0' }}>
-                <CheckCircle size={13} /> 멍스팟 확인 완료
-              </span>
-              : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', background: '#F3F4F6', padding: '4px 12px', borderRadius: '999px', border: '1px solid #E5E7EB' }}>
-                <AlertCircle size={13} /> 유저 제안 정보
-              </span>
-            }
-            
-            {(selectedPlace.requirements || []).map(req => {
-              const isAttention = req.includes('입마개');
-              return (
-                <span key={req} style={{ 
-                  display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700, 
-                  color: isAttention ? '#DC2626' : '#4F46E5', 
-                  background: isAttention ? '#FEF2F2' : '#EEF2FF', 
-                  padding: '4px 12px', borderRadius: '999px', 
-                  border: `1px solid ${isAttention ? '#FECACA' : '#C3DAFE'}`
-                }}>
-                  {isAttention && <AlertCircle size={13} />}
-                  {isAttention ? '주의: ' : '🔖 '}{req}
-                </span>
-              );
-            })}
-            
-            {(selectedPlace.facilities || []).map(fac => (
-              <span key={fac} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '4px 12px', borderRadius: '999px', border: '1px solid #D1FAE5' }}>
-                ✨ {fac}
-              </span>
-            ))}
-          </div>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px', color: 'var(--text-main)' }}>내용</div>
+                <textarea
+                  placeholder="구체적인 내용을 알려주시면 큰 도움이 됩니다 (예: 현재 강아지 동반이 금지되었습니다 등)"
+                  value={feedbackMessage}
+                  onChange={(e) => setFeedbackMessage(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '100px',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #E2E8F0',
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                    resize: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
 
-          {selectedPlace.notes && (
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
-              {selectedPlace.notes}
-            </p>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setIsFeedbackMode(false);
+                    setFeedbackMessage('');
+                  }}
+                  style={{ flex: 1, height: '48px' }}
+                >
+                  <ArrowLeft size={18} /> 이전으로
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={isSubmittingFeedback || !feedbackMessage.trim()}
+                  onClick={async () => {
+                    if (!feedbackMessage.trim() || !selectedPlace) return;
+                    setIsSubmittingFeedback(true);
+                    try {
+                      await addDoc(collection(db, 'feedbacks'), {
+                        placeId: selectedPlace.id,
+                        placeName: selectedPlace.name,
+                        type: feedbackType,
+                        message: feedbackMessage,
+                        createdAt: new Date().toISOString(),
+                      });
+                        showStatus('소중한 피드백이 접수되었습니다. 감사합니다! 🐾', 'success');
+                      setIsFeedbackMode(false);
+                      setFeedbackMessage('');
+                    } catch (err) {
+                      console.error('Feedback error:', err);
+                      showStatus('이미 정보가 전송되었거나 오류가 발생했습니다.');
+                    } finally {
+                      setIsSubmittingFeedback(false);
+                    }
+                  }}
+                  style={{ flex: 2, height: '48px' }}
+                >
+                  {isSubmittingFeedback ? <Loader size={18} className="spin" /> : <Send size={18} />}
+                  보내기
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="place-meta">
+                <MapPin size={16} />
+                <span>{selectedPlace.address}{selectedPlace.addressDetail ? ` (${selectedPlace.addressDetail})` : ''}</span>
+              </div>
+
+              {/* 인증 상태 + 필요항목 */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                {selectedPlace.isDogFriendly
+                  ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: '#16A34A', background: '#F0FDF4', padding: '4px 12px', borderRadius: '999px', border: '1px solid #BBF7D0' }}>
+                    <CheckCircle size={13} /> 멍스팟 확인 완료
+                  </span>
+                  : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 700, color: '#6B7280', background: '#F3F4F6', padding: '4px 12px', borderRadius: '999px', border: '1px solid #E5E7EB' }}>
+                    <AlertCircle size={13} /> 유저 제안 정보
+                  </span>
+                }
+                
+                {(selectedPlace.requirements || []).map(req => {
+                  const isAttention = req.includes('입마개');
+                  return (
+                    <span key={req} style={{ 
+                      display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', fontWeight: 700, 
+                      color: isAttention ? '#DC2626' : '#4F46E5', 
+                      background: isAttention ? '#FEF2F2' : '#EEF2FF', 
+                      padding: '4px 12px', borderRadius: '999px', 
+                      border: `1px solid ${isAttention ? '#FECACA' : '#C3DAFE'}`
+                    }}>
+                      {isAttention && <AlertCircle size={13} />}
+                      {isAttention ? '주의: ' : '🔖 '}{req}
+                    </span>
+                  );
+                })}
+                
+                {(selectedPlace.facilities || []).map(fac => (
+                  <span key={fac} style={{ fontSize: '0.78rem', fontWeight: 700, color: '#059669', background: '#ECFDF5', padding: '4px 12px', borderRadius: '999px', border: '1px solid #D1FAE5' }}>
+                    ✨ {fac}
+                  </span>
+                ))}
+              </div>
+
+              {selectedPlace.notes && (
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.5 }}>
+                  {selectedPlace.notes}
+                </p>
+              )}
+
+              <div className="place-actions">
+                <button className="btn-primary" onClick={() => openDirections(selectedPlace)}>
+                  <Navigation size={18} />
+                  길찾기
+                </button>
+                <button className="btn-secondary" onClick={() => sharePlace(selectedPlace)}>
+                  <Share2 size={18} />
+                  공유
+                </button>
+              </div>
+
+              {/* 피드백 */}
+              <button
+                type="button"
+                onClick={() => setIsFeedbackMode(true)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline', padding: '4px 0', marginTop: '4px', fontFamily: 'inherit' }}
+              >
+                이 정보가 틀렸나요?
+              </button>
+            </>
           )}
-
-          <div className="place-actions">
-            <button className="btn-primary" onClick={() => openDirections(selectedPlace)}>
-              <Navigation size={18} />
-              길찾기
-            </button>
-            <button className="btn-secondary" onClick={() => sharePlace(selectedPlace)}>
-              <Share2 size={18} />
-              공유
-            </button>
-          </div>
-
-          {/* 피드백 */}
-          <button
-            onClick={() => {
-              const type = prompt('피드백 유형을 입력하세요:\n1. 정보 수정 요청\n2. 폐업·삭제 요청\n3. 기타');
-              if (!type) return;
-              const typeMap: Record<string, string> = { '1': 'correction', '2': 'delete', '3': 'other' };
-              const message = prompt('자세한 내용을 입력해 주세요:');
-              if (!message) return;
-              import('firebase/firestore').then(({ addDoc, collection }) => {
-                addDoc(collection(db, 'feedbacks'), {
-                  placeId: selectedPlace.id,
-                  placeName: selectedPlace.name,
-                  type: typeMap[type] || 'other',
-                  message,
-                  createdAt: new Date().toISOString(),
-                }).then(() => alert('피드백이 접수되었습니다. 감사합니다! 🐾'));
-              });
-            }}
-            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline', padding: '4px 0', marginTop: '4px', fontFamily: 'inherit' }}
-          >
-            이 정보가 틀렸나요?
-          </button>
         </div>
       )}
     </main>
-  );
+  </>);
 }
