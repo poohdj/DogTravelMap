@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'vfYqxaw1buFycCmBYv-ic65viSS3VA2ymkZjfcFTq-Y',
-    // naver: '발급받으시면 여기에 추가',
+    naver: 'cf6694632f05ff2cb8e391744f63666c7225ea61',
   },
 };
 
