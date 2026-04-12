@@ -270,7 +270,7 @@ export default function Home() {
   const sharePlace = useCallback(async (place: Place) => {
     const shareData = {
       title: `멍스팟 - ${place.name}`,
-      text: `🐾 ${place.name}\n${place.address}${place.addressDetail ? ` (${place.addressDetail})` : ''}\n애견동반: ${place.isDogFriendly ? '가능' : '확인필요'}`,
+      text: `🐾 ${place.name}\n${place.address}${place.addressDetail ? ` (${place.addressDetail})` : ''}\n상태: ${place.isDogFriendly ? '멍스팟 확인완료' : '유저 제안 정보'}`,
       url: `https://map.kakao.com/link/map/${encodeURIComponent(place.name)},${place.lat},${place.lng}`,
     };
     if (navigator.share) {
@@ -412,7 +412,7 @@ export default function Home() {
           </div>
           
           <label className="drawer-toggle">
-            <span>애견동반 가능만 보기</span>
+            <span>인증된 장소만 보기</span>
             <div className={`toggle-switch ${dogFriendlyOnly ? 'on' : ''}`} onClick={() => setDogFriendlyOnly(p => !p)} />
           </label>
           
@@ -527,14 +527,14 @@ export default function Home() {
             <span>{selectedPlace.address}{selectedPlace.addressDetail ? ` (${selectedPlace.addressDetail})` : ''}</span>
           </div>
 
-          {/* 애견동반 여부 + 필요항목 */}
+          {/* 인증 상태 + 필요항목 */}
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
             {selectedPlace.isDogFriendly
-              ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#16A34A', background: '#F0FDF4', padding: '4px 10px', borderRadius: '999px' }}>
-                <CheckCircle size={13} /> 애견동반 가능
+              ? <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#16A34A', background: '#F0FDF4', padding: '4px 10px', borderRadius: '999px', border: '1px solid #BBF7D0' }}>
+                <CheckCircle size={13} /> 멍스팟 확인 완료
               </span>
-              : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#DC2626', background: '#FFF5F5', padding: '4px 10px', borderRadius: '999px' }}>
-                <AlertCircle size={13} /> 동반 여부 확인 필요
+              : <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', fontWeight: 600, color: '#6B7280', background: '#F3F4F6', padding: '4px 10px', borderRadius: '999px', border: '1px solid #E5E7EB' }}>
+                <AlertCircle size={13} /> 유저 제안 정보
               </span>
             }
             {selectedPlace.requirements?.map(req => (

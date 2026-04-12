@@ -180,12 +180,12 @@ export default function SuggestPage() {
               value={form.addressDetail} onChange={e => setForm(p => ({ ...p, addressDetail: e.target.value }))} />
           </Field>
 
-          <Field label="애견동반 가능 여부 *">
+          <Field label="정보의 출처/직접 확인 여부 *">
             <div style={styles.pillGroup}>
               <button type="button" onClick={() => setForm(p => ({ ...p, isDogFriendly: true }))}
-                style={form.isDogFriendly ? { ...styles.pillActive, background: '#16A34A', borderColor: '#16A34A' } : styles.pill}>✅ 가능</button>
+                style={form.isDogFriendly ? { ...styles.pillActive, background: '#16A34A', borderColor: '#16A34A' } : styles.pill}>🏢 직접(방문/전화) 확인완료</button>
               <button type="button" onClick={() => setForm(p => ({ ...p, isDogFriendly: false }))}
-                style={!form.isDogFriendly ? { ...styles.pillActive, background: '#DC2626', borderColor: '#DC2626' } : styles.pill}>❌ 불가 / 확인 필요</button>
+                style={!form.isDogFriendly ? { ...styles.pillActive, background: '#6B7280', borderColor: '#6B7280' } : styles.pill}>🔍 인터넷 검색 / 기타</button>
             </div>
           </Field>
 

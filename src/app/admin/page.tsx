@@ -365,12 +365,12 @@ export default function AdminPage() {
               <input style={{ ...styles.input, marginTop: '8px' }} type="text" placeholder="상세 주소 입력 (예: 102호, 2층)"
                 value={form.addressDetail} onChange={e => setForm(p => ({ ...p, addressDetail: e.target.value }))} />
             </Field>
-            <Field label="애견동반 가능 *">
+            <Field label="정보 검증 상태 *">
               <div style={styles.pillGroup}>
                 <button type="button" onClick={() => setForm(p => ({ ...p, isDogFriendly: true }))}
-                  style={form.isDogFriendly ? { ...styles.pillActive, background: '#16A34A', border: '1.5px solid #16A34A' } : styles.pill}>✅ 가능</button>
+                  style={form.isDogFriendly ? { ...styles.pillActive, background: '#16A34A', border: '1.5px solid #16A34A' } : styles.pill}>✅ 멍스팟 확인 완료</button>
                 <button type="button" onClick={() => setForm(p => ({ ...p, isDogFriendly: false }))}
-                  style={!form.isDogFriendly ? { ...styles.pillActive, background: '#DC2626', border: '1.5px solid #DC2626' } : styles.pill}>❌ 불가/확인필요</button>
+                  style={!form.isDogFriendly ? { ...styles.pillActive, background: '#6B7280', border: '1.5px solid #6B7280' } : styles.pill}>❓ 미검증 / 유저제안</button>
               </div>
             </Field>
             <Field label="동반 규정 (복수 선택 가능)">
