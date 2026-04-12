@@ -82,14 +82,19 @@ export default function AdminPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
 
-  // 장소 관리 목록
-  const [managePlaces, setManagePlaces] = useState<Place[]>([]);
   const [manageLoading, setManageLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Place | null>(null); // 삭제 확인 모달용
 
   // 피드백 목록
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [feedbacksLoading, setFeedbacksLoading] = useState(false);
+
+  // --- 디버깅용 상태 ---
+  const [rawSuggestionsCount, setRawSuggestionsCount] = useState<number | null>(null);
+  const [rawFeedbacksCount, setRawFeedbacksCount] = useState<number | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [debugData, setDebugData] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Auth state
   useEffect(() => {
@@ -109,28 +114,25 @@ export default function AdminPage() {
 
   const loadSuggestions = async () => {
     setSuggestionLoading(true);
-    console.log('--- Loading Suggestions ---');
+    setLastError(null);
     try {
       const snap = await getDocs(collection(db, 'suggestions'));
-      console.log('Raw suggestions count:', snap.docs.length);
+      setRawSuggestionsCount(snap.docs.length);
       
-      const data = snap.docs
-        .map(d => {
-          const raw = d.data();
-          return { id: d.id, ...raw } as Suggestion;
-        })
+      const allData = snap.docs.map(d => ({ id: d.id, ...d.data() } as Suggestion));
+      setDebugData({ suggestions: allData });
+      
+      const filtered = allData
         .filter(s => {
-          const isPending = s.status === 'pending';
-          if (!isPending) console.log(`Skipping suggestion ${s.id}: status is ${s.status}`);
-          return isPending;
+          const status = (s.status || '').toLowerCase().trim();
+          return status === 'pending' || !s.status; // status가 없어도 일단 보여줌
         })
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       
-      console.log('Filtered suggestions (pending):', data.length);
-      setSuggestions(data);
-    } catch (err) {
+      setSuggestions(filtered);
+    } catch (err: any) {
       console.error('Error loading suggestions:', err);
-      alert('제안 목록을 불러오는 중 오류가 발생했습니다. 콘솔을 확인해 주세요.');
+      setLastError(`제안 로드 실패: ${err.message || '알 수 없는 오류'}`);
     } finally { setSuggestionLoading(false); }
   };
 
@@ -146,19 +148,18 @@ export default function AdminPage() {
 
   const loadFeedbacks = async () => {
     setFeedbacksLoading(true);
-    console.log('--- Loading Feedbacks ---');
+    setLastError(null);
     try {
       const snap = await getDocs(collection(db, 'feedbacks'));
-      console.log('Raw feedbacks count:', snap.docs.length);
+      setRawFeedbacksCount(snap.docs.length);
       
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback))
-        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      const allData = snap.docs.map(d => ({ id: d.id, ...d.data() } as Feedback));
       
-      console.log('Processed feedbacks:', data.length);
-      setFeedbacks(data);
-    } catch (err) {
+      const sorted = allData.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      setFeedbacks(sorted);
+    } catch (err: any) {
       console.error('Error loading feedbacks:', err);
-      alert('피드백 목록을 불러오는 중 오류가 발생했습니다.');
+      setLastError(`피드백 로드 실패: ${err.message || '알 수 없는 오류'}`);
     } finally { setFeedbacksLoading(false); }
   };
 
@@ -394,6 +395,25 @@ export default function AdminPage() {
             <AlertCircle size={14} /> 유저 피드백 {feedbacks.length > 0 && `(${feedbacks.length})`}
           </button>
         </div>
+
+        {/* Debug Info Bar */}
+        {(rawSuggestionsCount !== null || rawFeedbacksCount !== null || lastError) && (
+          <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '10px', fontSize: '0.78rem', display: 'flex', flexWrap: 'wrap', gap: '12px', border: '1px solid #E2E8F0', alignItems: 'center' }}>
+            <div style={{ color: '#64748B', fontWeight: 700 }}>🔍 디버그 정보:</div>
+            {tab === 'suggestions' && <span>제안(DB: {rawSuggestionsCount}, 표시: {suggestions.length})</span>}
+            {tab === 'feedbacks' && <span>피드백(DB: {rawFeedbacksCount}, 표시: {feedbacks.length})</span>}
+            {lastError && <span style={{ color: '#DC2626', fontWeight: 800 }}>⚠️ {lastError}</span>}
+            <button onClick={() => setShowDebug(!showDebug)} style={{ background: '#2D3142', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer' }}>
+              {showDebug ? '덤프 닫기' : '원본 데이터(JSON) 보기'}
+            </button>
+          </div>
+        )}
+
+        {showDebug && debugData && (
+          <div style={{ background: '#1E293B', color: '#CBD5E1', padding: '16px', borderRadius: '12px', fontSize: '0.75rem', maxHeight: '200px', overflowY: 'auto', fontFamily: 'monospace' }}>
+            <pre>{JSON.stringify(debugData, null, 2)}</pre>
+          </div>
+        )}
 
         {/* Tab: 장소 추가/수정 */}
         {tab === 'add' && (
