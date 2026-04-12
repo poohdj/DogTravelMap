@@ -508,6 +508,6 @@ const styles: Record<string, React.CSSProperties> = {
   pillGroup: { display: 'flex', flexWrap: 'wrap', gap: '8px' },
   pill: { padding: '10px 18px', background: '#F1F5F9', border: '1.5px solid transparent', borderRadius: '999px', fontSize: '0.88rem', fontWeight: 700, color: '#64748B', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' },
   pillActive: { background: '#FFF8EE', border: '1.5px solid #FF9F1C', color: '#FF9F1C' },
-  searchBtn: { display: 'flex', alignItems: 'center', gap: '8px', padding: '0 24px', background: '#2D3142', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' },
+  searchBtn: { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#2D3142', color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit', minHeight: '48px' },
   submitBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '18px', background: '#FF9F1C', color: '#fff', border: 'none', borderRadius: '18px', fontWeight: 800, fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 8px 24px rgba(255,159,28,0.25)', fontFamily: 'inherit', marginTop: '12px', transition: 'all 0.2s ease' },
 };
