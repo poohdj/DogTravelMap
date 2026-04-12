@@ -39,7 +39,8 @@ body:has(.admin-page-body) {
 /* Map specific styles */
 .map-container {
   width: 100vw;
-  height: 100vh;
+  height: 100vh; /* Fallback for older browsers */
+  height: 100dvh; /* Dynamic Vh for modern Safari address bar handling */
   position: relative;
   display: flex;
   flex-direction: column;
@@ -206,7 +207,7 @@ body:has(.admin-page-body) {
 .fab-container {
   position: absolute;
   right: 16px;
-  bottom: 24px; /* Default from bottom */
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px)); /* Safe Area aware */
   display: flex;
   flex-direction: column;
   gap: 12px;
