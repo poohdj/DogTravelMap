@@ -177,13 +177,20 @@ export default function SuggestPage() {
           const fullAddress = data.roadAddress || data.jibunAddress;
           setForm(prev => ({ ...prev, address: fullAddress }));
           
-          ensureKakaoLoaded(() => {
+          const runKakaoSearch = () => {
+            if (!window.kakao?.maps?.services) return;
             const geocoder = new window.kakao.maps.services.Geocoder();
             geocoder.addressSearch(fullAddress, (result: any, status: any) => {
               if (status === window.kakao.maps.services.Status.OK)
                 setForm(prev => ({ ...prev, lat: result[0].y, lng: result[0].x }));
             });
-          });
+          };
+
+          if (window.kakao?.maps) {
+            window.kakao.maps.load(runKakaoSearch);
+          } else {
+            runKakaoSearch();
+          }
         },
       }).open();
     };
