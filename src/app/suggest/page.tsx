@@ -346,21 +346,21 @@ export default function SuggestPage() {
               <Info size={14} /> 주소가 정확한지 확인 후 상세 주소를 입력해 주세요.
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <input
-                style={{ ...styles.input, flex: '1 1 200px', minWidth: '0' }}
-                type="text"
-                readOnly
-                placeholder="버튼을 눌러 주소를 검색하세요"
-                value={form.address}
+              <input 
+                style={{ ...styles.input, flex: '1 1 300px', minWidth: '0' }} 
+                type="text" 
+                readOnly 
+                placeholder="버튼을 눌러 주소를 검색하세요" 
+                value={form.address} 
               />
-              <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto' }}>
-                <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1 }}>
+              <div style={{ display: 'flex', gap: '8px', flex: '1 1 280px' }}>
+                <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1, minHeight: '44px' }}>
                   <MapPin size={16} /> 검색
                 </button>
-                <button
-                  type="button"
-                  onClick={useCurrentLocation}
-                  style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2 }}
+                <button 
+                  type="button" 
+                  onClick={useCurrentLocation} 
+                  style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2, minHeight: '44px' }}
                   disabled={isLocating}
                 >
                   {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}

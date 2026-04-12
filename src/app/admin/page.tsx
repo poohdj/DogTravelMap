@@ -587,29 +587,29 @@ export default function AdminPage() {
               <div style={{ marginBottom: '6px', fontSize: '0.8rem', color: '#9094A6', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <AlertCircle size={14} /> 주소가 정확한지 확인 후 상세 주소를 입력해 주세요.
               </div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <input
-                  style={{ ...styles.input, flex: '1 1 200px', minWidth: '0' }}
-                  type="text"
-                  readOnly
-                  placeholder="아래 버튼을 눌러 주소 검색"
-                  value={form.address}
-                />
-                <div style={{ display: 'flex', gap: '8px', flex: '1 1 auto' }}>
-                  <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1 }}>
-                    <MapPin size={16} /> 주소 검색
-                  </button>
-                  <button
-                    type="button"
-                    onClick={useCurrentLocation}
-                    style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2 }}
-                    disabled={isLocating}
-                  >
-                    {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
-                    <span style={{ marginLeft: '4px' }}>{isLocating ? '확인 중...' : '현 위치'}</span>
-                  </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <input 
+                    style={{ ...styles.input, flex: '1 1 300px', minWidth: '0' }} 
+                    type="text" 
+                    readOnly 
+                    placeholder="아래 버튼을 눌러 주소 검색" 
+                    value={form.address} 
+                  />
+                  <div style={{ display: 'flex', gap: '8px', flex: '1 1 280px' }}>
+                    <button type="button" onClick={openAddressSearch} style={{ ...styles.searchBtn, flex: 1, minHeight: '44px' }}>
+                      <MapPin size={16} /> 주소 검색
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={useCurrentLocation} 
+                      style={{ ...styles.searchBtn, background: '#7C3AED', flex: 1.2, minHeight: '44px' }}
+                      disabled={isLocating}
+                    >
+                      {isLocating ? <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Navigation size={16} />}
+                      <span style={{ marginLeft: '4px' }}>{isLocating ? '확인 중...' : '현 위치'}</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
               {form.lat && <p style={{ fontSize: '0.78rem', color: '#16A34A', marginTop: '4px' }}>✓ 좌표 자동 입력됨 ({form.lat}, {form.lng})</p>}
 
               {form.lat && form.lng && (
