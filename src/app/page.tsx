@@ -255,19 +255,21 @@ export default function Home() {
 
     const markers: any[] = [];
     
-    // 커스텀 마커 이미지 설정 (강아지 발바닥 Premium SVG - 오리지널 디자인 복원)
+    // 커스텀 마커 이미지 설정 (강아지 발바닥 Premium SVG - 완벽 대칭 버전)
     const svgIcon = `
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
-        <!-- Pin Shape -->
-        <path fill="#FF9F1C" d="M20 2C12.27 2 6 8.27 6 16c0 8.4 12 19.2 12 19.2s12-10.8 12-19.2c0-7.73-6.27-14-14-14z"/>
-        <!-- White Circle Background for Paw -->
+        <!-- Perfect Symmetrical Pin Design -->
+        <path fill="#FF9F1C" d="M20 38c-0.8 0-11-13-11-22 0-6.1 4.9-11 11-11s11 4.9 11 11c0 9-10.2 22-11 22z"/>
+        <!-- Centered White Background Circle -->
         <circle fill="white" cx="20" cy="16" r="7.5"/>
-        <!-- Detailed Paw Print -->
+        <!-- Balanced Paw Print centered at (20, 16) -->
         <g fill="#FF9F1C">
-          <ellipse cx="20" cy="12.5" rx="1.8" ry="2.2"/> <!-- Upper middle toe -->
-          <ellipse cx="16.2" cy="14.2" rx="1.8" ry="2.2" transform="rotate(-25 16.2 14.2)"/> <!-- Left toe -->
-          <ellipse cx="23.8" cy="14.2" rx="1.8" ry="2.2" transform="rotate(25 23.8 14.2)"/> <!-- Right toe -->
-          <path d="M20 17.5c-2.2 0-4 1.2-4 2.8 0 1.2 1.2 2.2 2.5 2.2h3c1.3 0 2.5-1 2.5-2.2 0-1.6-1.8-2.8-4-2.8z"/> <!-- Main Pad -->
+          <!-- Toes -->
+          <ellipse cx="20" cy="12.2" rx="1.8" ry="2.2"/>
+          <ellipse cx="16.2" cy="13.8" rx="1.7" ry="2.1" transform="rotate(-20 16.2 13.8)"/>
+          <ellipse cx="23.8" cy="13.8" rx="1.7" ry="2.1" transform="rotate(20 23.8 13.8)"/>
+          <!-- Main Pad -->
+          <path d="M20 17.5c-2.3 0-4.2 1.3-4.2 3 0 1.3 1.3 2.3 2.7 2.3h3.1c1.4 0 2.7-1 2.7-2.3 0-1.7-1.9-3-4.3-3z"/>
         </g>
       </svg>
     `;
