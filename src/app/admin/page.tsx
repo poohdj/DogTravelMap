@@ -130,10 +130,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!ADMIN_EMAILS.includes(user?.email ?? '')) return;
-    if (tab === 'suggestions') loadSuggestions();
-    if (tab === 'manage') loadManagePlaces();
-    if (tab === 'feedbacks') loadFeedbacks();
-  }, [tab, user]);
+    // Load all data on initial mount to show counts in tab badges
+    loadSuggestions();
+    loadManagePlaces();
+    loadFeedbacks();
+  }, [user]);
+
 
   const loadSuggestions = async () => {
     setSuggestionLoading(true);
