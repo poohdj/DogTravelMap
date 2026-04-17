@@ -697,27 +697,46 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Floating Action Buttons */}
-      <div className={`fab-container ${selectedPlace ? 'sheet-open' : ''}`}>
-        <button className="fab-btn list-toggle-btn" onClick={() => setIsListViewOpen(true)} title="목록 보기">
-          <List size={22} />
-        </button>
-        <button
-          className="fab-btn"
-          aria-label="내 위치로 이동"
-          onClick={goToMyLocation}
-          disabled={isLocating}
-          style={{ color: isLocating ? 'var(--primary-color)' : 'var(--text-main)' }}
-        >
-          {isLocating
-            ? <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
-            : <Navigation size={22} />}
-        </button>
-      </div>
+      {/* Floating Action Buttons - Default Map State */}
+      {!selectedPlace && (
+        <div className="fab-container">
+          <button className="fab-btn list-toggle-btn" onClick={() => setIsListViewOpen(true)} title="목록 보기">
+            <List size={22} />
+          </button>
+          <button
+            className="fab-btn"
+            aria-label="내 위치로 이동"
+            onClick={goToMyLocation}
+            disabled={isLocating}
+            style={{ color: isLocating ? 'var(--primary-color)' : 'var(--text-main)' }}
+          >
+            {isLocating
+              ? <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
+              : <Navigation size={22} />}
+          </button>
+        </div>
+      )}
 
       {/* Place Info Bottom Sheet */}
       {selectedPlace && (
         <div className="place-info-card">
+          {/* FABs attached to the top of the card */}
+          <div className="fab-on-card">
+            <button className="fab-btn list-toggle-btn" onClick={() => setIsListViewOpen(true)} title="목록 보기">
+              <List size={22} />
+            </button>
+            <button
+              className="fab-btn"
+              aria-label="내 위치로 이동"
+              onClick={goToMyLocation}
+              disabled={isLocating}
+              style={{ color: isLocating ? 'var(--primary-color)' : 'var(--text-main)' }}
+            >
+              {isLocating
+                ? <Loader size={22} style={{ animation: 'spin 1s linear infinite' }} />
+                : <Navigation size={22} />}
+            </button>
+          </div>
           <div className="sheet-handle"></div>
 
           <div className="place-header">
