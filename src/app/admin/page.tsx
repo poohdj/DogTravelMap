@@ -162,7 +162,12 @@ export default function AdminPage() {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as Place))
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
       setManagePlaces(data);
-    } finally { setManageLoading(false); }
+    } catch (err) {
+      console.error('Error loading manage places:', err);
+    } finally { 
+      setManageLoading(false); 
+    }
+
   };
 
   // 장소 관리 탭 필터링 로직

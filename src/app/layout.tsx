@@ -69,6 +69,8 @@ export default function RootLayout({
         {/* Map script is now dynamically loaded in page.tsx to prevent loading race conditions */}
         {children}
       </body>
+
+
     </html>
   );
 }
